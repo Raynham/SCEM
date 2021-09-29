@@ -1,0 +1,50 @@
+1. animals <-c("Snake","Ostrich","Cat","Spider")
+> num_legs <- c(0,2,4,8)
+> animals_legs <- data.frame(animals,num_legs)
+
+2. x_vect <-seq(12,2,by=-2)
+> X <- matrix(x_vect, nrow=2)
+> Y <- matrix(seq(1,4,by=1),nrow=2)
+> Z <- matrix(seq(4,10,by=2),nrow=2)
+> Y%*%Z
+> Z%*%Y
+
+They are not the same. matrix multiplication is not commutative.
+
+>Y*Z
+>Z*Y
+They are the same. Element-wise multiplication is commutative.
+
+> Y%*%X
+
+Computing matrix XY (X%*%Y) means a 2 by 3 matirx times a 2 by 2 matrix, but there is not the third row in Y which can be multiplied by the third column in X
+
+
+> Y%*%solve(Y)
+> solve(Y)%*%Y
+
+The results are the same, they are both a 2 by 2 identity matrix.
+
+>solve(Y)%*%X
+
+> solve(Y,X)
+
+
+3. helloR <- function(n){
+  # exception handling, when the input data is not numeric or non-negative
+  if (!is.numeric(n)||n<0){
+    stop("the input data must be a postive number!n")
+  }
+  #define a parameter as the sum of needed number in the scope
+  sumH <- 0
+for (i in 0: floor(n-1)){
+  if (i%%2==0 || i%%7==0) {
+    sumH<- sumH+i
+  }
+}
+  return(sumH)
+}
+
+
+# check if this function is right or not
+print(helloR(1000))
