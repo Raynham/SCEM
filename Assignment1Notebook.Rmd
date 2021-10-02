@@ -1,0 +1,33 @@
+---
+title: "Assignment1Notebook"
+author: "Ruinan Wang"
+date: "02/10/2021"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Wave Plot
+```{r}
+x<- seq(0,20, by=0.01)
+y<- c(sin(x))
+sin_df<-data.frame(x,y)
+
+```
+
+### The first few rows of data frame
+```{r echo=FALSE}
+head(sin_df,3)
+```
+
+### Now we can plot this data frame
+```{r echo = FALSE}
+plot(x,y)
+```
+
+
+
+
+
+

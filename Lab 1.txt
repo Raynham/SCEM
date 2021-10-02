@@ -49,4 +49,3 @@ for (i in 0: floor(n-1)){
 # check if this function is right or not!!!!
 print(helloR(1000))
 
-sxaxxa
