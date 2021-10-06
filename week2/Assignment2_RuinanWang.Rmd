@@ -1,0 +1,29 @@
+---
+title: "Assignment2"
+author: "Ruinan Wang"
+date: "06/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1. Types of variables
+### check the rows number and columns number of hawksSmall
+```{r}
+library(Stat2Data)
+data("Hawks")
+hawksSmall<-drop_na(select (Hawks,Age,Day,Month,Year,CaptureTime,Species,Wing,Weight,Tail))
+dim(hawksSmall)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

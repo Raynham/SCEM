@@ -1,0 +1,84 @@
+1.
+1. 
+> install.packages("Stat2Data") 
+> library(Stat2Data)
+> data("Hawks")
+> hawksSmall<-drop_na(select (Hawks,Age,Day,Month,Year,CaptureTime,Species,Wing,Weight,Tail))
+> dim(hawksSmall)
+[1] 897   9
+
+> head(hawksSmall, n=5)
+
+
+Continuous: Weight, Wing
+Categorical: Species, Age
+discrete:Month
+
+
+
+2. There are too many variables so that it is hard for customers to interpret the insights or relationships
+
+3. 
+ggplot(data = hawksSmall, aes(x=Weight))+xlab("Weight (gm)")+geom_histogram(binwidth = 100) +ylab("Count")
+
+Bimodal
+
+
+4.ggplot(data = hawksSmall, aes(x=Tail))+xlab("Tail (mm)")+geom_density() +ylab("density")
+
+"adjust" argument is for adjusting the smoothness of lines.  Trimodal
+
+ggplot(data =hawksSmall, aes(x=Tail, color = Species)) +geom_density() +theme_bw()+ xlab("Tail (mm)") +ylab("Density")
+
+ggplot(data =hawksSmall, aes(x=Tail, y=Species, fill = Species)) +geom_violin() +theme_bw()+ xlab("Tail (mm)") 
+
+5. ggplot(data =hawksSmall, aes(x=Tail, y=Weight)) +geom_point(size=3, aes( color = Species, shape = Species)) +theme_bw()+ xlab("Tail (mm)") + ylab("Weight (gm)")
+
+Tail is for horizontal position
+Weight is for vertical position
+Species is for color and shape
+points, triangle, square
+
+6.  ggplot(data = hawksSmall, aes(x=Tail, y =Weight))+theme_bw() + geom_point(aes(color=Species))+facet_wrap(~Species, scale = "free")+geom_smooth(method = "lm")
+Position, Length, shade, color
+
+
+
+
+2. 
+1. 
+hSF<- hawksSmall %>%
++ filter(Species == "RT"& Weight>1000) %>%
++ select(Wing,Weight,Tail)
+> hSF
+
+dim(hSF)
+
+hSF has 3 variables, 387 examples (observations or cases)
+
+
+2. 
+hSF <- hSF %>% 
+arrange(Wing)
+head (hSF, n=5)
+ 
+3. 
+Species <- unique(hawksSmall$Species)
+species_full_names <- c("Red-tailed"," Cooper's","Sharp-shinned")
+species_full_names_df <-data.frame(Species,species_full_names_df)
+species_full_names_df
+left_join(hawksSmall,species_full_names_df)
+ hawksFullName <- left_join(hawksSmall,species_full_names_df) %>%
+ select(-Species, -species)%>%
+ rename(Species = species_full_names)
+head(select(hawksFullName,Species,Wing,Weight),n=7)
+
+4. 
+
+hawksWithBMI <- Hawks %>% 
+ mutate (bird_BMI = 1000*Weight/Wing^2) %>%
+ select (Species, bird_BMI)
+hawksWithBMI<-arrange(hawksWithBMI,desc(bird_BMI))
+head(hawksWithBMI, n=8)
+
+ggplot(data = hawksWithBMI,aes(x=bird_BMI, y=Species, fill=Species))+ geom_violin()+theme_bw()+xlab("BMI of Birds")
