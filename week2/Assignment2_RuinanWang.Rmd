@@ -6,24 +6,90 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
+options(warn = -1)
 knitr::opts_chunk$set(echo = TRUE)
+library(Stat2Data)
+library(tidyverse)
 ```
 
 ## 1. Types of variables
 ### check the rows number and columns number of hawksSmall
-```{r}
-library(Stat2Data)
+```{r }
 data("Hawks")
 hawksSmall<-drop_na(select (Hawks,Age,Day,Month,Year,CaptureTime,Species,Wing,Weight,Tail))
 dim(hawksSmall)
 ```
 
-## Including Plots
+## Robustness of location estimator
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r echo = TRUE}
+hal <- Hawks$Hallux
+hal<- hal[!is.na(hal)]
+outlier_val<-100
+num_outliers <-10
+corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers)
+)
+num_outliers_vect <-seq(0,1000)
+means_vect<-c()
+for (num_outliers in num_outliers_vect){
+corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers))
+means_vect<- c(means_vect,mean(corrupted_hal))
+}
+
+num_outliers_vect<-seq(0,1000)
+median_vect<-c()
+
+for(num_outliers in num_outliers_vect){
+corrupted_hal <-c(hal,rep(outlier_val,times=num_outliers))
+median_vect<-c(median_vect, median(corrupted_hal))
+}
+
+t_means_vect<-c()
+for(num_outliers in num_outliers_vect){
+corrupted_hal<c(hal,rep(outlier_val,times=num_outliers))
+t_means_vect<- c(t_means_vect,mean(corrupted_hal,na.rm=1,trim=0.1))
+}
+
+df_means_medians<- data.frame(num_outliers=num_outliers_vect, mean=means_vect, t_mean= t_means_vect, median=median_vect)
+df_means_medians%>%
+pivot_longer(!num_outliers, names_to = "Estimator", values_to ="value")%>%
+ggplot(aes(x=num_outliers,color=Estimator,linetype=Estimator, y=value)) + geom_line()+xlab("Number of outliners")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Box plots and outliers
+```{r echo=TRUE}
+Hawks%>%
+  ggplot(aes(x=Species,y=Weight,na.rm=1)) + geom_boxplot()
+```
+
+
+### Computer the number of outlier for the three samples of hawk weights broken down by species.
+```{r echo=TRUE}
+outliers <- function(x){
+  q25<-quantile(x,0.25,na.rm = 1)
+  q75<-quantile(x,0.75,na.rm = 1)
+  iq_range <- q75-q25
+  return( x[((x>q75+1.5*iq_range)|(x<q25-1.5*iq_range))&!is.na(x)])
+}
+num_outliers <- function (x) {return(length(outliers(x)))}
+
+Hawks%>%
+  group_by(Species)%>%
+  summarise(num_outliers_weight=num_outliers(Weight))
+```
+
+
+### Covariance and correlation under linear transformations
+
+(1)Covariance between $\widetilde{X_i}$ and $\widetilde{Y_i}$ is
+$$
+  \sum\widetilde{X},\widetilde{Y} = (ac)\sum{X},{Y}
+$$
+
+(2) Correlation between $\widetilde{X_i}$ and $\widetilde{Y_i}$ is
+
+$$
+\rho{\widetilde{X},{\widetilde{Y}}} = \frac {\rho{X,Y}}{|a||c|}
+$$
+

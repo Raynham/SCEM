@@ -65,11 +65,9 @@ head (hSF, n=5)
 3. 
 Species <- unique(hawksSmall$Species)
 species_full_names <- c("Red-tailed"," Cooper's","Sharp-shinned")
-species_full_names_df <-data.frame(Species,species_full_names_df)
-species_full_names_df
-left_join(hawksSmall,species_full_names_df)
- hawksFullName <- left_join(hawksSmall,species_full_names_df) %>%
- select(-Species, -species)%>%
+species_full_names_df <-data.frame(Species,species_full_names)
+hawksFullName <- left_join(Hawks,species_full_names_df) %>%
+ select(-Species)%>%
  rename(Species = species_full_names)
 head(select(hawksFullName,Species,Wing,Weight),n=7)
 
@@ -81,4 +79,69 @@ hawksWithBMI <- Hawks %>%
 hawksWithBMI<-arrange(hawksWithBMI,desc(bird_BMI))
 head(hawksWithBMI, n=8)
 
-ggplot(data = hawksWithBMI,aes(x=bird_BMI, y=Species, fill=Species))+ geom_violin()+theme_bw()+xlab("BMI of Birds")
+hawksWithBMI <- filter(hawksWithBMI, bird_BMI<=100)
+
+ggplot(data = hawksWithBMI, aes(x=bird_BMI,y= Species, fill = Species)) + geom_violin() + theme_bw()+xlab("BMI of Birds")+scale_x_continuous(trans = "log2")
+
+5. 
+
+hawksSummary <- hawksFullName %>%
+group_by(Species)%>%
+summarize(num_rows = n(), mn_wings = mean(Wing, na.rm=1), md_wing = median(Wing,na.rm = 1),t_mn_wing = mean(Wing,na.rm=1, trim = 0.1), tail_wing_ratio = mean(Wing/Tail,na.rm=1))
+head(hawksSummary)
+
+hawksSummaryMissing <- hawksFullName %>%
+select(Species,Wing,Weight,Culmen, Hallux,Tail,StandardTail,Tarsus,Crop)%>%
+group_by(Species)%>%
+summarize(across(everything(),~sum(is.na(.x))))%>%
+
+hawksSummaryMissing
+
+
+3. 
+
+1. Hawks %>%
+summarise(across(c("Wing","Weight"),list(mean=~mean(.x,na.rm=1),t_mean=~mean(.x,na.rm=1,trim=0.1),med=~median(.x,na.rm=1))))
+
+2.  Hawks %>%
+group_by(Species) %>%
+summarise (across(c("Wing","Weight"), list(mean=~mean(.x,na.rm=1),t_mean=~mean(.x,na.rm=1,trim=0.1),med=~median(.x,na.rm=1))))
+
+
+2. 
+
+sample variance: a^2*Sx^2
+
+standard deviation: abs(a)*Sx
+
+
+3.
+hal <- Hawks$Hallux
+hal<- hal[!is.na(hal)]
+outlier_val<-100
+num_outliers <-10
+corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers)
++ )
+num_outliers_vect <-seq(0,1000)
+means_vect<-c()
+for (num_outliers in num_outliers_vect){
+corrupted_hal<-c(hal,rep(outlier_val,times=num_outliers))
+means_vect<- c(means_vect,mean(corrupted_hal))
+}
+
+num_outliers_vect<-seq(0,1000)
+median_vect<-c()
+for(num_outliers in num_outliers_vect){
+corrupted_hal <-c(hal,rep(outlier_val,times=num_outliers))
+median_vect<-c(median_vect, median(corrupted_hal))
+
+t_means_vect<-c()
+for(num_outliers in num_outliers_vect){
+corrupted_hal<c(hal,rep(outlier_val,times=num_outliers))
+t_means_vect<- c(t_means_vect,mean(corrupted_hal,na.rm=1,trim=0.1))
+}
+
+df_means_medians<- data.frame(num_outliers=num_outliers_vect, mean=means_vect, t_mean= t_means_vect, median=median_vect)
+df_means_medians%>%
+pivot_longer(!num_outliers, names_to = "Estimator", values_to ="value")%>%
+ggplot(aes(x=num_outliers,color=Estimator,linetype=Estimator, y=value)) + geom_line()+xlab("Number of outliners")
