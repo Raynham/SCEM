@@ -6,25 +6,260 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(purrr)
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(palmerpenguins)
 ```
 
-## R Markdown
+# Assignment
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## 1 Random experienments, events and sample spaces
+  
+### **Definition:**  
+  **Random experiment** is a procedure (real or imagined) which:  
+       (a) has a well-defined set of possible outcomes;  
+       (b) could (at least in principle) be repeated arbitrarily many times  
+  **Event** is a set (i.e a collection) of possible outcomes. (it implies the sample space)  
+  **sample space** is the set of all possible outcomes of interest for a random experiment.  
+  
+      
++ **What is the random experiment in your example?**  
+   The football game between Manchester United and Chelsea.  
++ **What are the possible outcomes in your example?**  
+   Manchester United wins, Chelsea wins, the two teams draws, the game is interrupted due to unexpected events.  
++ **What are the events in your example?**  
+   {Manchester United wins,the two teams draws},{Chelsea wins, Manchester United wins},{Chelsea wins},{the game is interrupted due to unexpected events}.....  
++ **What is the sample space in your example?**  
+   {Manchester United wins, Chelsea wins, the two teams draws, the game is interrupted due to unexpected events}   
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r cars}
-summary(cars)
+
+## 2 Tidy data and iteration  
+
+### 2.1 Missing data and iteration  
+
+The following function performs imputation by mean. What library do we need to load to run this function?   **library(purrr) ## The purrR library which is contained in the Tidyverse**
+```{r echo = TRUE, results='hide'}
+impute_by_mean<-function(x){
+  mu<-mean(x,na.rm=1) # first compute the mean of x
+  
+  impute_f<-function(z){ # coordinate-wise imputation
+    
+    if(is.na(z)) {return(mu)}# if z is na replace with mean
+    else {return(z)}# otherwise leave in place
+  }
+    return(map_dbl(x,impute_f))# apply the map function to impute across vector
+  }
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+Create a function called impute_by_median which imputes missing values based on the median of the sample,rather than the mean.
+
+```{r echo=TRUE}
+impute_by_median <- function(x){
+  value <- median(x,na.rm = 1)
+  impute_f<-function(z){
+    if (is.na(z)){
+      return(value)
+    }else{return(z)}
+  }
+  return(map_dbl(x,impute_f))
+}
+
+v<-c(1,2,NA,4)
+impute_by_median(v)
+```
+  
+  
+Next generate a data frame with two variables x and y.  For our first variable x, we have a sequence(x1,x2,...,xn) where x1=0, xn=  10 and for each i = 1,...,n−1, xi+1=xi+ 0.1. For our second variable y we set yi= 5×i+ 1 for i= 1,...,n. Generate data of this form and place within a data frame called df_xy.
+
+```{r echo=TRUE}
+generateY <- function(x){return (5*x+1)}
+x <- seq(from = 0, to = 10, by =0.1)
+y <- map_dbl(x,generateY)
+df_xy <- data.frame(x,y)
+head(df_xy, n=5)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+We will now use map2_dbl()to generate a new data frame with missing data.First create a function sometimes_missing with two variables index and value. The function should return NA if index is divisible by 5 and returns value otherwise.
+
+```{r echo=TRUE}
+sometimes_missing <- function (index,value){
+  if (index %% 5 ==0){
+    return(NA)
+  }else{return(value)}
+}
+
+sometimes_missing(14,25)
+sometimes_missing(15,25)
+```
+
+Next generate a new data frame called df_xy_missing with two variables x and y, but some missing data.
+
+```{r echo=TRUE}
+df_xy_missing <- df_xy %>%
+  mutate(y = map2_dbl(row_number(),y,sometimes_missing))
+df_xy_missing%>%head(10)
+
+```
+
+
+
+Create a new data frame df_xy_impute with two variables x and y, using compute_by_median.
+```{r echo=TRUE}
+df_xy_impute <- df_xy_missing %>%
+  mutate(y = impute_by_median(y))
+head(df_xy_impute,n=10)
+```
+
+Plot the original data, the corrupted data and the imputed data together together with a trend line for eachsample.
+```{r echo=TRUE}
+df_xy <- df_xy %>%
+  mutate(source="original")
+df_xy_missing<-df_xy_missing%>%
+  mutate(source="corrupted")
+df_xy_impute<-df_xy_impute%>%
+  mutate(source="imputed")
+df_combined<-rbind(df_xy,df_xy_missing,df_xy_impute)
+
+ggplot(df_combined,aes(x=x,y=y,color=source))+geom_point()+facet_wrap(~source)+geom_smooth(method="lm")
+```
+
+Do the imputed values y give reasonable estimates of the true values y?  
+&nbsp;&nbsp; ***Don't know how to explain.***     
+
+
+
+## 2.2 Tidying data with pivot functions
+
+```{r}
+library(readxl)# load the readxl library
+folder_path<-"C:\\UoB\\Statistical Computing and Empirical Methods (SCEM)\\firstRProject\\week3"# set this to the name of the directory containing "HockeyLeague.xlsx"
+file_name<-"HockeyLeague.xlsx" # set the file name 
+file_path<-paste(folder_path,file_name,sep="\\") # create the file_path
+wins_data_frame<-read_excel(file_path,sheet="Wins") # read of a sheet from an XML file
+
+wins_data_frame %>%
+  select(1:5)%>%
+  head(3)
+```
+
+   
+   + Is the above data tidy?
+   No, Columns correspond to single variables with the same sort of value for each observation. But the competition data every year includes the total number of competitions and wins number.
+   
+```{r}
+wins_tidy <- wins_data_frame %>%
+  rename(Team="...1")%>%
+  pivot_longer(cols=-Team,names_to="Years",values_to = "Wins_of_Total")%>%
+  separate(col="Wins_of_Total",into = c("Wins","Total"),sep = " of ", convert = TRUE)
+head(wins_tidy, 5) 
+dim(wins_tidy)
+  
+```
+
+The data frame about complete hockeyleague
+
+```{r}
+losses_data_frame<-read_excel(file_path,sheet="Losses") # read of a sheet from an XML file
+
+losses_data_frame %>%
+  select(1:5)%>%
+  head(3)
+losses_tidy <- losses_data_frame %>%
+  rename(Team="...1")%>%
+  pivot_longer(cols=-Team,names_to="Years",values_to = "Losses_of_Total")%>%
+  separate(col="Losses_of_Total",into = c("Losses","Total"),sep = " of ", convert = TRUE)
+hockey_df <- full_join(wins_tidy,losses_tidy)
+hockey_df <- hockey_df%>%
+  mutate(Draws=Total-Wins-Losses, across(.cols = -Total & is.numeric, ~.x/Total, .names ="{.col}_rt"))
+head(hockey_df)
+
+summary_hockey_df <- hockey_df %>%
+  group_by(Team)%>%
+  summarise(across(ends_with("_rt"),list(mean=mean, median=median)))
+summary_hockey_df<- summary_hockey_df%>%
+  rename(W_rt_mean=Wins_rt_mean, L_rt_mean=Losses_rt_mean,D_rt_mean=Draws_rt_mean, W_rt_median=Wins_rt_median, L_rt_meidan=Losses_rt_median,D_rt_median=Draws_rt_median)%>%
+  arrange(desc(W_rt_median))
+head(summary_hockey_df)
+# L represents Lose, W represents Win and D represents Draw
+
+```
+### 2.3 Most correlated variables 
+```{r}
+max_cor_var<- function(df,col_name){
+  v_col<-df%>%select(all_of(col_name))
+  df_num<-df%>%
+    select_if(is.numeric)%>%
+    select(-all_of(col_name))
+  correlations<-unlist(map(df_num,function(x){cor(x,v_col, use="complete.obs")}))
+ max_abs_cor_var<-names(which(abs(correlations)==max(abs(correlations))))
+ cor<-as.double(correlations[max_abs_cor_var])
+ return(data.frame(var_name=max_abs_cor_var,cor=cor))
+}
+
+top_correlates_by_var <- function(df){
+  num_df <- df%>% select(is.numeric)
+  num_name <-names(num_df)
+  corr_cols <- as.vector(unlist(map(num_name,function(.x){max_cor_var(df,.x)$var_name})))
+  corr_cols_df<-data.frame(key=names(num_df),value=corr_cols)%>%
+    pivot_wider(names_from = key,values_from = value)
+  return(corr_cols_df)
+}
+penguins%>%top_correlates_by_var()
+
+
+penguins%>%
+  group_by(species)%>%
+  nest()%>%
+  mutate(max_var= map(data,top_correlates_by_var))%>%
+  select(-data)%>%
+  unnest(cols = max_var)
+
+
+
+```
+
+
+
+## 3 Elementary set theory  
+
+### 3.1  Rolling a diceLet’s suppose we role a dice.  
+
+   What is $A\cup{B}$? {1,2,3,4,6}     
+   What is $A\cup{C}$? {1,2,3,4,5,6}     
+   What is $A\cap{B}$? {2}  
+   What is $A\cap{C}$? $\emptyset$  
+   A\B = {1,3}  
+   A\c = $\emptyset$  
+   Are A and B disjoint? No  
+   Are A and C disjoint? Yes  
+   a partition of $\Omega$ = {1,2,3},{4,5,6} (2 sets)  {1,2}{3,4}{5,6} (3 sets)
+### 3.2  Complements, subsets and De Morgan’s laws  
+   Can you give an expression for$(A^c)^c$ without using the notion of a complement?
+    $$(A^c)^c= A$$ 
+    What is $\Omega^c$? $\emptyset$  
+    Show that if A $A\subseteq{B}\ then B^c\subseteq{A^c}$   
+    $Because\ B^c=\{\omega\in\Omega:\omega\notin{B}\}$  
+    $And\ A^c=\{\omega\in\Omega:\omega\notin{A}\}$  
+    $Then\ A\subseteq{B}$  
+    $So\ B^c\subseteq{A^c}$  
+   
+### 3.3 Cardinality and the set of all subsets  
+    $cardinality = 2^k$
+### 3.4 isjointness and partitions   
+    There is no set which is disjoint from any other sets
+    $S_1,S_2,S_3,S_4 are pair-wise disjoint$
+    $$S_1\cup{S_2}\cup{S_3}\cup{S_4}=A_1\cup{A_2}\cup{A_3}\cup{A_4}=\Omega$$
+## 4 Introduction to probability
+
+
+   
