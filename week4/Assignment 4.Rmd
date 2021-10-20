@@ -1,0 +1,54 @@
+---
+title: "Assignment 4"
+author: "Ruinan Wang"
+date: "20/10/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(purrr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+## Sampling with replacement
+```{r}
+prob_red_spheres <- function (z){
+  if (z>35||z<0)return("wrong")
+  return (3^z*7^(35-z)*choose(35,z)/10^35)
+}
+prob_red_spheres(20)
+
+num_reds <- c(1:35)
+prob <- as.vector(unlist(map(num_reds,prob_red_spheres)))
+prob_by_num_reds <-data.frame(num_reds,prob)
+prob_by_num_reds%>%head(3)
+ggplot(data=prob_by_num_reds,aes(x=num_reds, y=prob))+geom_line()+xlab("Number of reds")+ylab("Probability")+theme_bw()
+sample(10,35,replace = TRUE)
+
+
+set.seed(0)
+
+for(i in 1:5){
+  print(sample(100,5,replace = FALSE))
+}
+
+for (i in 1:5) {
+  set.seed(1)
+  print(sample(100,5,replace = FALSE))
+}
+
+num_trials<-1000
+set.seed(0)
+
+sampling_with_replacement_simulation <- data.frame(trial=1:num_trials)%>%
+  mutate(sample_balls=map(.x=trial,~sample(10,35,replace=TRUE)))
+sampling_with_replacement_simulation <- sampling_with_replacement_simulation %>%
+  mutate(num_reds = map_dbl(.x=sample_balls, ~function(map(.x, function()))))
+
+head(sampling_with_replacement_simulation)
+
+
+```
