@@ -65,6 +65,6 @@ when the number of sample becomes more and more, the mean average of sample is m
 ```{r}
 sample_list <- data.frame(B_prob =seq(0,0.9,by=0.01))%>%
   mutate(samples_average = map(B_prob,~mean(sample_x_015(0.1,.x,100L))))
-ggplot(data=sample_list, aes(x=B_prob, y=samples_average))+geom_line()
+ggplot(data=sample_list, aes(x=B_prob, y=samples_average))+geom_density()
 
 ```
