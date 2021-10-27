@@ -46,9 +46,45 @@ set.seed(0)
 sampling_with_replacement_simulation <- data.frame(trial=1:num_trials)%>%
   mutate(sample_balls=map(.x=trial,~sample(10,35,replace=TRUE)))
 sampling_with_replacement_simulation <- sampling_with_replacement_simulation %>%
-  mutate(num_reds = map_dbl(.x=sample_balls, ~function(map(.x, function()))))
+  mutate(num_reds = map_dbl(.x=sample_balls, ~sum(.x<=3)))
 
-head(sampling_with_replacement_simulation)
+num_reds_in_simluation<- sampling_with_replacement_simulation%>%
+  pull(num_reds)
 
+prob_by_num_reds<- prob_by_num_reds%>%
+  mutate(simulation_count = map_dbl(.x=num_reds, ~sum(num_reds_in_simluation==.x)))
+
+prob_by_num_reds <-prob_by_num_reds%>%
+  mutate(expected_count=num_trials*prob)
+
+prob_by_num_reds %>% rename(Simulation =simulation_count, Expected = expected_count) %>%
+  pivot_longer(cols=c("Simulation","Expected"), names_to="Type", values_to="count")%>%
+  ggplot(aes(num_reds,count)) + geom_line(aes(linetype=Type, color=Type)) + scale_linetype_manual(values=c("solid","dashed")) + theme_bw() + xlab("Number of reds") + ylab("Count")
+```
+
+
+4 Sampling without replacement
+
+```{r}
+set.seed(0)
+num_trials2 <- 10000
+num_reds2 <- 1:50
+num_blues2 <- 1:30
+num_greens2<- 1:20
+sample_size <- 10
+
+sampling_without_replacement_simulation <- data.frame(trial=1:num_trials2)%>%
+  mutate(sample_balls = map(.x=trial, ~sample(100,10, replace=FALSE)))
+sampling_without_replacement_simulation<- sampling_without_replacement_simulation %>%
+  mutate(reds = map_dbl(.x = sample_balls, ~sum(.x<=50)), blues = map_dbl(.x=sample_balls, ~sum(.x<=80 & .x>50)), greens = map_dbl(.x=sample_balls, ~sum(.x<=100 & .x>80)))
+sampling_without_replacement_simulation<- sampling_without_replacement_simulation %>%
+  mutate(color_missing = pmin(reds,blues,greens)==0)
+
+head(sampling_without_replacement_simulation, n=10)
+
+prob_miss_colors<- mean(sampling_without_replacement_simulation %>% pull(color_missing))
+
+prob_miss_colors
 
 ```
+

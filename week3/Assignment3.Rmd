@@ -133,7 +133,7 @@ df_combined<-rbind(df_xy,df_xy_missing,df_xy_impute)
 ggplot(df_combined,aes(x=x,y=y,color=source))+geom_point()+facet_wrap(~source)+geom_smooth(method="lm")
 ```
 
-Do the imputed values y give reasonable estimates of the true values y?  
+Do the imputed values y give reasonable estimates of the true values y? 
 &nbsp;&nbsp; ***Don't know how to explain.***     
 
 
