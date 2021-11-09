@@ -190,15 +190,5 @@ all.equal(my_quantile_output,inbuilt_quantile_output)
 
 ```
 
-### 6 Poisson Distribution
-
-```{r}
-
-
-
-
-
-
-```
 
 
