@@ -1,9 +1,5 @@
 ---
-<<<<<<< HEAD
-title: "assignment 5"
-=======
 title: "Assignment 5"
->>>>>>> 5a1628590769c2d550f73894d8cd2f907637e835
 author: "Ruinan Wang"
 date: "27/10/2021"
 output: html_document
@@ -11,29 +7,6 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-<<<<<<< HEAD
-```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-=======
 library(tidyr)
 library(dplyr)
 library(purrr)
@@ -44,16 +17,13 @@ library(ggplot2)
 ### 2.Simulating data with the uniform distribution
 ```{r}
 set.seed(0)
-
 n<-1000
-
 sample_X<-data.frame(U=runif(n))%>%
   mutate(X=case_when(
     (0<=U)&(U<0.25)~1,
     (0.25<=U)&(U<0.5)~5,
   (0.5<=U)&(U<=1)~0))%>%
   pull(X)
-sample_X
 ```
 
 #### why does this sample_X correspond to a sequence of i.i.d. copies X_1,....X__n of X where P(X=1) = a and P(X=5)=b and P(X=0) = 1-a-b with a=b=0.25?   
@@ -68,31 +38,167 @@ sample_x_015<-function (a,b,n){
   if (a>1||a<0||b>1||b<0||a+b>1||!is.integer(n))
     return("there is something wrong")
   else{
-    set.seed(0)
     sample_015<-data.frame(U = runif(n))%>%
       mutate(X=case_when(
         (0<=U)&(U<a)~1,
         (a<=U)&(U<a+b)~5,
-        (a+b<=U)&(U<1)~0))%>%
+        (a+b<=U)&(U<=1)~0))%>%
       pull(X)
     return(sample_015)
   }
 }
 
-sample_result <- sample_x_015(0.5,0.01,1000L)
+n<-10000L
+alpha<-1/2
+beta<-1/10
+sample_result <- sample_x_015(alpha,beta,n)
 mean(sample_result)
-expe <- 0.5*1+0.01*1
+expe <- 0.5*1+0.1*5
 expe
 ```
 
 when the number of sample becomes more and more, the mean average of sample is more close to the expectation of the sample
 
+```{r}
+vari <- var(sample_result)
+vari
+```
+
 
 
 ```{r}
+set.seed(0)
 sample_list <- data.frame(B_prob =seq(0,0.9,by=0.01))%>%
-  mutate(samples_average = map(B_prob,~mean(sample_x_015(0.1,.x,100L))))
-ggplot(data=sample_list, aes(x=B_prob, y=samples_average))+geom_density()
+  mutate(samples_average = unlist(map(B_prob,~mean(sample_x_015(0.1,.x,100L)))))%>%
+  mutate(expectation=0.1+B_prob*5)
+ggplot(data=sample_list, aes(x=B_prob, y=samples_average))+geom_point()+geom_smooth(method="lm")
+```
+
+
+
+### 3 the Gaussian distribution
+
+```{r}
+# X <- seq(-4,6,length=100)
+# y1 <- dnorm(X,1,1)
+# y2 <- dnorm(X,1,sqrt(2))
+# y3 <- dnorm(X,1,sqrt(3))
+# dataSample <- data.frame(X,y1,y2,y3) 
+# gaussianDF <- dataSample%>%
+#   pivot_longer(starts_with("y"),names_to="Variance", values_to="Y" )
+# head(gaussianDF)
+# ggplot(data = gaussianDF, aes(x = X, y = Y, color=Type, linetype = Type))+ geom_line()
+
+x<-seq(-4,6,0.1)
+normal_densities_by_x<-data.frame(x=x,density=dnorm(x,mean=1,sd=sqrt(1)),var=1)%>%
+  rbind(data.frame(x=x,density=dnorm(x,mean=1,sd=sqrt(2)),var=2))%>%
+  rbind(data.frame(x=x,density=dnorm(x,mean=1,sd=sqrt(3)),var=3))
+ggplot(normal_densities_by_x,aes(x=x,y=density, color=as.character(var), linetype = as.character(var))) + geom_line()+theme_bw()+labs(color="Variance",linetype = "Variance", x="x",y="Density")
+
+
+cumulative_distribution_by_x<-data.frame(x=x,distribution=pnorm(x,mean=1,sd=sqrt(1)),var=1)%>%
+  rbind(data.frame(x=x,distribution=pnorm(x,mean=1,sd=sqrt(2)),var=2))%>%
+  rbind(data.frame(x=x,distribution=pnorm(x,mean=1,sd=sqrt(3)),var=3))
+
+ggplot(cumulative_distribution_by_x,aes(x=x,y=distribution, color=as.character(var), linetype = as.character(var))) + geom_line()+theme_bw()+labs(color="Variance",linetype = "Variance", x="x",y="cumulative distribution function")
+
+
+
+probs <- seq(0,1,0.01)
+quantile_function_by_x<-data.frame(p=probs,quantile=qnorm(probs,mean=1,sd=sqrt(1)),var=1)%>%
+  rbind(data.frame(p=probs,quantile=qnorm(probs,mean=1,sd=sqrt(2)),var=2))%>%
+  rbind(data.frame(p=probs,quantile=qnorm(probs,mean=1,sd=sqrt(3)),var=3))
+
+ggplot(quantile_function_by_x,aes(x=p,y=quantile, color=as.character(var), linetype = as.character(var))) + geom_line()+theme_bw()+labs(color="Variance",linetype = "Variance", x="x",y="quantile function")
+
+
+
+
+set.seed(0)
+standardGaussianSample <- rnorm(100)
+mean1Var3GaussianSampleA <- standardGaussianSample * sqrt(3) + 1
+
+set.seed(0)
+mean1Var3GaussianSampleB <- rnorm(100, 1, sqrt(3))
+all.equal(mean1Var3GaussianSampleA,mean1Var3GaussianSampleB)
+
+
+colors<-c("Population density"="red", "Sample kernel density"="blue","Population mean"="green", "Sample mean"="violet")
+linetypes<-c("Population density"="solid", "Sample kernel density"="dashed","Population mean"="solid", "Sample mean"="dashed")
+
+ggplot()+labs(x="x",y="Density")+theme_bw()+geom_line(data= filter(normal_densities_by_x,var==3),aes(x,y=density,color="Population density")) +geom_density(data=data.frame(x=mean1Var3GaussianSampleA),aes(x=x,color="Sample kernel density", linetype = "Sample kernel density")) +geom_vline(aes(xintercept=1,color="Population mean", linetype = "Population mean")) + geom_vline(aes(xintercept=mean(mean1Var3GaussianSampleA),color="Sample mean", linetype="Sample mean")) + scale_color_manual(name="Legend",values=colors)+scale_linetype_manual(name="Legend",values=linetypes)
+```
+
+
+### 4 The Binomial distribution and the central limit theorem
+
+```{r}
+p<- 0.7
+n<- 50
+
+binom_df<- data.frame(x=seq(0,n))%>%
+  mutate(pmf=map_dbl(.x=x,~dbinom(.x,size=n,prob=p)))
+head(binom_df)
+
+mu = n*p
+sigma = sqrt(n*p*(1-p))
+gaussian_df <- data.frame(x=seq(0,n, by=0.01))%>%
+  mutate(pdf=map_dbl(.x=x,~dnorm(.x,mean=mu,sd=sigma)))
+head(gaussian_df)
+
+colors<- c("Gaussian pdf"="red","Binomial pmf"="blue")
+fill <- c("Gaussian pdf"="white", "Binomial pmf"="white")
+
+ggplot()+labs(x="x",y="Probability")+theme_bw()+
+  geom_line(data=gaussian_df,aes(x=x,y=pdf, color="Gaussian pdf"), size=2) + geom_col(data=binom_df, aes(x=x,y=pmf, color="Binomial pmf", fill="Binomial pmf")) + scale_color_manual(name="",values=colors)+scale_fill_manual(name="",values=fill)+xlim(20,50)
+```
+
+
+
+### 5 Exponential distribution
+
+```{r}
+my_cdf_exp <- function (x,lambda) {
+  if (x<=0){
+    return(0)
+  }
+  else {
+    return (1-exp(-lambda*x))
+  }
+} 
+  
+lambda <- 1/2
+
+map_dbl(.x=seq(-1,4),.f=~my_cdf_exp(x=.x,lambda=lambda))
+
+
+test_inputs<-seq(-1,10,0.1)
+my_cdf_output<-map_dbl(.x=test_inputs, .f=~my_cdf_exp(x=.x,lambda=lambda))
+inbuilt_cdf_output<-map_dbl(.x=test_inputs, .f=~pexp(q=.x,rate=lambda))
+all.equal(my_cdf_output,inbuilt_cdf_output)
+
+my_quantile_exp <- function (p,lambda){
+  return(-1/lambda*log(1-p,exp(1)))
+}
+
+p<- seq(0.01,0.99,0.01)
+my_quantile_output<-map_dbl(.x=p,.f=~my_quantile_exp(.x,lambda))
+
+inbuilt_quantile_output<- map_dbl(p,~qexp(.x,lambda))
+
+all.equal(my_quantile_output,inbuilt_quantile_output)
 
 ```
->>>>>>> 5a1628590769c2d550f73894d8cd2f907637e835
+
+### 6 Poisson Distribution
+
+```{r}
+
+
+
+
+
+
+```
+
+
