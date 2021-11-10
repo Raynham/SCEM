@@ -1,0 +1,70 @@
+---
+title: "assginment6"
+author: "Ruinan Wang"
+date: "10/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1 A Gaussian model for Red tailed hawks
+```{r}
+library(Stat2Data)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(purrr)
+data("Hawks")
+
+RedTailedDf <- Hawks %>%
+  filter(Species=="RT") %>%
+  select(Weight,Tail,Wing)
+
+head(RedTailedDf)
+
+kernel_tail <- RedTailedDf%>%
+  pull(Tail)
+
+n <- length(kernel_tail)
+mu_mle_tail <- mean(RedTailedDf$Tail,na.rm = 1)
+sigama_mle_tail <- sd(RedTailedDf$Tail, na.rm = 1)*sqrt((n-1)/n)
+
+mu_mle_tail
+
+sigama_mle_tail
+
+colors <- c("MLE density" = "red", "Kernel density"="blue")
+
+Tails <- seq(mu_mle_tail-3*sigama_mle_tail,mu_mle_tail+3*sigama_mle_tail, by=sigama_mle_tail*0.001)
+
+ggplot()+geom_line(data=data.frame(Tail=Tails,Density=dnorm(Tails,mu_mle_tail,sigama_mle_tail)),aes(x=Tail,y=Density, color = "MLE density")) + geom_density(data=tibble(kernel_tail),aes(x=kernel_tail,color="Kernel density"))+labs(y="Density function (mm)", color="Estimator")+theme_bw()+scale_color_manual(values=colors)
+```
+
+
+### 2 Location estimators with Gaussian data
+```{r}
+set.seed(0)
+num_trials_per_sample_size<-100
+min_sample_size<-5
+max_sample_size<-1000
+sample_size_inc<-5
+mu_0<-1
+sigma_0<-3
+
+simulation_df<-crossing(trial=seq(num_trials_per_sample_size), sample_size=seq(min_sample_size, max_sample_size,sample_size_inc))%>% # create data frame of all pairs of sample_size and trial
+  mutate(simulation=pmap(.l=list(trial,sample_size),.f=~rnorm(.y,mean=mu_0,sd=sigma_0)))%>% # simulate sequences of Gaussian random variables
+  mutate(sample_md=map_dbl(.x=simulation,.f=median))%>% # compute the sample medians
+  mutate(sample_mean = map_dbl(.x=simulation, .f=mean))%>%
+  group_by(sample_size)%>%
+  summarise(msq_error_md=mean((sample_md-mu_0)^2), msq_err_mean=mean((sample_mean-mu_0)^2))
+
+head(simulation_df)
+
+simulation_df <- simulation_df%>%
+  pivot_longer(cols=-sample_size,names_to = "type", values_to="msq_err")
+ggplot()+geom_smooth(data=simulation_df, aes(x=sample_size, y=msq_err, color = type, linetype=type)) +theme_bw() + labs(x="Sample size", y= "Mean square error") +xlim(0,500)+ylim(0,0.35)
+
+
+```
