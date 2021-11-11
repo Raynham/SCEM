@@ -29,21 +29,21 @@ kernel_tail <- RedTailedDf%>%
 
 n <- length(kernel_tail)
 mu_mle_tail <- mean(RedTailedDf$Tail,na.rm = 1)
-sigama_mle_tail <- sd(RedTailedDf$Tail, na.rm = 1)*sqrt((n-1)/n)
+sigma_mle_tail <- sd(RedTailedDf$Tail, na.rm = 1)*sqrt((n-1)/n)
 
 mu_mle_tail
 
-sigama_mle_tail
+sigma_mle_tail
 
 colors <- c("MLE density" = "red", "Kernel density"="blue")
 
-Tails <- seq(mu_mle_tail-3*sigama_mle_tail,mu_mle_tail+3*sigama_mle_tail, by=sigama_mle_tail*0.001)
+Tails <- seq(mu_mle_tail-3*sigma_mle_tail,mu_mle_tail+3*sigma_mle_tail, by=sigma_mle_tail*0.001)
 
-ggplot()+geom_line(data=data.frame(Tail=Tails,Density=dnorm(Tails,mu_mle_tail,sigama_mle_tail)),aes(x=Tail,y=Density, color = "MLE density")) + geom_density(data=tibble(kernel_tail),aes(x=kernel_tail,color="Kernel density"))+labs(y="Density function (mm)", color="Estimator")+theme_bw()+scale_color_manual(values=colors)
+ggplot()+geom_line(data=data.frame(Tail=Tails,Density=dnorm(Tails,mu_mle_tail,sigma_mle_tail)),aes(x=Tail,y=Density, color = "MLE density")) + geom_density(data=tibble(kernel_tail),aes(x=kernel_tail,color="Kernel density"))+labs(y="Density function (mm)", color="Estimator")+theme_bw()+scale_color_manual(values=colors)
 ```
 
 
-### 2 Location estimators with Gaussian data
+## 2 Location estimators with Gaussian data
 ```{r}
 set.seed(0)
 num_trials_per_sample_size<-100
@@ -58,13 +58,39 @@ simulation_df<-crossing(trial=seq(num_trials_per_sample_size), sample_size=seq(m
   mutate(sample_md=map_dbl(.x=simulation,.f=median))%>% # compute the sample medians
   mutate(sample_mean = map_dbl(.x=simulation, .f=mean))%>%
   group_by(sample_size)%>%
-  summarise(msq_error_md=mean((sample_md-mu_0)^2), msq_err_mean=mean((sample_mean-mu_0)^2))
+  summarise(msq_error_md=mean((sample_md-mu_0)^2), msq_error_mean1=mean((sample_mean-mu_0)^2),msq_error_mean2=(mean(sample_mean)-mu_0)^2+(mean(sample_mean-mean(sample_mean)))^2)
 
 head(simulation_df)
 
 simulation_df <- simulation_df%>%
-  pivot_longer(cols=-sample_size,names_to = "type", values_to="msq_err")
-ggplot()+geom_smooth(data=simulation_df, aes(x=sample_size, y=msq_err, color = type, linetype=type)) +theme_bw() + labs(x="Sample size", y= "Mean square error") +xlim(0,500)+ylim(0,0.35)
+  pivot_longer(cols=-sample_size,names_to = "Estimator", values_to="value")
 
+simulation_df$Estimator <-factor(simulation_df$Estimator,levels = c('msq_error_mean1','msq_error_mean2','msq_error_md'),labels=c("Mean1","Mean2","Meidan"))
+
+ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype=Estimator))+geom_point()+geom_smooth() +theme_bw() + labs(x="Sample size", y= "Mean Square Error")+xlim(5,500)+ylim(0,0.35)
+```
+
+## 3  Unbiased estimation of the population variance
+
+
+### First, let's suppose we have a $X$ with a Gaussian Distribution ~ $N (1,3)$, here are the simulation study
+```{r}
+
+simulation_df <- crossing (trial=seq(num_trials_per_sample_size),sample_size=seq(min_sample_size,max_sample_size,sample_size_inc)) %>%
+  mutate(simulation=pmap(.l=list(trial,sample_size),.f=~rnorm(.y,mean=mu_0,sd=sigma_0)))%>%
+  mutate(sample_variance_MLE=map_dbl(.x=simulation,.f=~var(.x)*(n-1)/n)) %>%
+  mutate(sample_variance_U=map_dbl(.x=simulation,.f=var))%>%
+  group_by(sample_size)%>%
+  summarise(bias_variance_MLE= (mean(sample_variance_MLE)-sigma_0^2), bias_variance_U= (mean(sample_variance_U)-sigma_0^2))
+
+simulation_df
+
+simulation_df <- simulation_df%>%
+  pivot_longer(cols=-sample_size,names_to = "Estimator", values_to="value")
+
+simulation_df$Estimator <-factor(simulation_df$Estimator,levels = c('bias_variance_MLE','bias_variance_U'),labels=c("Variance MLE","Variance U"))
+
+ggplot(data=simulation_df, aes(x=sample_size, y=value, color=Estimator, linetype=Estimator)) +geom_smooth(se=FALSE)+theme_bw()+labs(x="Sample Size", y="Bias Value")+ylim(-0.2,0.2) + geom_hline(aes(yintercept=0),color="blue")
 
 ```
+As we can see from the plot, the bias for variance U is more closed to 0, which means Variance U is more likely usbiased
