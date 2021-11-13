@@ -255,7 +255,6 @@ head(simulation_df)</code></pre>
 <pre class="r"><code>simulation_df &lt;- simulation_df%&gt;%
   pivot_longer(cols= - sample_size,names_to = &quot;Estimator&quot;, values_to=&quot;value&quot;)
 simulation_df$Estimator &lt;-factor(simulation_df$Estimator,levels = c(&#39;msq_error_mean1&#39;,&#39;msq_error_mean2&#39;,&#39;msq_error_md&#39;),labels=c(&quot;Mean1&quot;,&quot;Mean2&quot;,&quot;Meidan&quot;))
-
 ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype=Estimator))+geom_point()+geom_smooth() +theme_bw() + xlab(&quot;Sample size&quot;)+ylab(&quot;Mean Square Error&quot;)+ylim(0,1)</code></pre>
 <pre><code>## `geom_smooth()` using method = &#39;loess&#39; and formula &#39;y ~ x&#39;</code></pre>
 <pre><code>## Warning: Removed 3 rows containing non-finite values (stat_smooth).</code></pre>

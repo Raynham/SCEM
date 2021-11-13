@@ -90,7 +90,7 @@ mu_0<-1
 sigma_0<-3
 simulation_df <- crossing (trial=seq(num_trials_per_sample_size),sample_size=seq(min_sample_size,max_sample_size,sample_size_inc)) %>%
   mutate(simulation=pmap(.l=list(trial,sample_size),.f=~rnorm(.y,mean=mu_0,sd=sigma_0)))%>%
-  mutate(sample_variance_MLE=map_dbl(.x=simulation,.f=~var(.x)*(n-1)/n)) %>%
+  mutate(sample_variance_MLE=map_dbl(list(.x=simulation,.y=smaple_size),.f=~var(.x)*(.y-1)/.y)) %>%
   mutate(sample_variance_U=map_dbl(.x=simulation,.f=var))%>%
   group_by(sample_size)%>%
   summarise(bias_variance_MLE= (mean(sample_variance_MLE)-sigma_0^2), bias_variance_U= (mean(sample_variance_U)-sigma_0^2))
