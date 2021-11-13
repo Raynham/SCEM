@@ -75,7 +75,13 @@ ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype
 
 ### First, let's suppose we have a $X$ with a Gaussian Distribution ~ $N (1,3)$, here are the simulation study
 ```{r}
-
+set.seed(0)
+num_trials_per_sample_size<-1000
+min_sample_size<-5
+max_sample_size<-100
+sample_size_inc<-5
+mu_0<-1
+sigma_0<-3
 simulation_df <- crossing (trial=seq(num_trials_per_sample_size),sample_size=seq(min_sample_size,max_sample_size,sample_size_inc)) %>%
   mutate(simulation=pmap(.l=list(trial,sample_size),.f=~rnorm(.y,mean=mu_0,sd=sigma_0)))%>%
   mutate(sample_variance_MLE=map_dbl(.x=simulation,.f=~var(.x)*(n-1)/n)) %>%
@@ -102,7 +108,31 @@ As we can see from the plot, the bias for variance U is more closed to 0, which 
 
 
 ```{r}
+set.seed(0)
+num_trials_per_sample_size<-1000
+min_sample_size<-5
+max_sample_size<-100
+sample_size_inc<-5
+lambda_0 <- 0.5
 
+simulation_poisson_df <- crossing(trial=seq(num_trials_per_sample_size),sample_size=seq(min_sample_size,max_sample_size,sample_size_inc)) %>%
+  mutate(simulation = pmap(.l=list(trial,sample_size), ~rpois(.y,lambda_0)))%>%
+  mutate(lambda_MLE = map_dbl(.x=simulation,.f=mean))%>%
+  group_by(sample_size)%>%
+  summarize(MSE_lambda = mean((lambda_MLE-lambda_0)^2))
+head(simulation_poisson_df)
+ggplot(data=simulation_poisson_df, aes(x=sample_size, y=MSE_lambda))+geom_smooth()+theme_bw()+xlab("Sample size")+ylab("Mean square error")
 ```
 
+
+```{r}
+bortkiewicz_horsekick_data <- read.csv("VonBortkiewicz.csv")
+head(bortkiewicz_horsekick_data)
+lambda_MLE <- mean(bortkiewicz_horsekick_data$fatalities)
+lambda_MLE
+prob_no_fatalities <- dpois(0,lambda_MLE)
+prob_no_fatalities
+
+
+```
 
