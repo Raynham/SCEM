@@ -62,12 +62,18 @@ simulation_df<-crossing(trial=seq(num_trials_per_sample_size), sample_size=seq(m
 
 head(simulation_df)
 
+
+
+simulation_df%>%
+  pivot_longer(cols=-sample_size,names_to="Estimator",values_to="msq_error")%>%
+  mutate(Estimator=case_when(Estimator=="msq_error_md"~"Median",Estimator=="msq_error_mean1"~"Mean1",Estimator=="msq_error_mean2"~"Mean2"))%>%
+  ggplot(aes(x=sample_size,y=msq_error,color=Estimator,linetype=Estimator))+geom_smooth()+theme_bw()+xlab("Sample size")+ylab("Mean square error")
+
+
 simulation_df <- simulation_df%>%
-  pivot_longer(cols=-sample_size,names_to = "Estimator", values_to="value")
-
+  pivot_longer(cols= - sample_size,names_to = "Estimator", values_to="value")
 simulation_df$Estimator <-factor(simulation_df$Estimator,levels = c('msq_error_mean1','msq_error_mean2','msq_error_md'),labels=c("Mean1","Mean2","Meidan"))
-
-ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype=Estimator))+geom_point()+geom_smooth() +theme_bw() + labs(x="Sample size", y= "Mean Square Error")+xlim(5,500)+ylim(0,0.35)
+ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype=Estimator))+geom_point()+geom_smooth() +theme_bw() + xlab("Sample size")+ylab("Mean Square Error")+ylim(0,1)
 ```
 
 ## 3  Unbiased estimation of the population variance
@@ -133,6 +139,26 @@ lambda_MLE
 prob_no_fatalities <- dpois(0,lambda_MLE)
 prob_no_fatalities
 
-
+set.seed(0)
+lambda_0 <- 0.5
+n <- 1000
+sample_value <- rpois(n,lambda_0)
+lambda_MLE <- mean(sample_value)
+sample_value
+lambda_MLE
 ```
 
+
+### 6  Maximum likelihood estimation for the exponential distribution
+
+```{r}
+customer_purchase_time_data <- read.csv("CustomerPurchases.csv")
+
+customer_purchase_time_data<- customer_purchase_time_data%>%
+  mutate(time_diffs = lead(Time)-Time)
+lambda_MLE <- 1/mean(customer_purchase_time_data$time_diffs, na.rm=TRUE)
+lambda_MLE
+
+prob_excess_60s<- 1-pexp(60,lambda_MLE)
+prob_excess_60s
+```
