@@ -1,0 +1,31 @@
+---
+title: "Assignment7"
+author: "Ruinan Wang"
+date: "17/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(palmerpenguins)
+library(ggplot2)
+library(dplyr)
+```
+
+### Student’s t-confidence intervals
+
+```{r}
+adelie_flippers <- penguins %>% filter(species=="Adelie" && !is.na(flipper_length_mm)) %>% select(flipper_length_mm) %>% na.omit()
+adelie_flippers <- as.vector(unlist(adelie_flippers))s
+
+alpha<-0.05
+sample_size<-length(adelie_flippers)
+sample_mean<-mean(adelie_flippers)
+sample_sd<-sd(adelie_flippers)
+t<-qt(1-alpha/2,df=sample_size-1)
+confidence_interval_l<-sample_mean-t*sample_sd/sqrt(sample_size)
+confidence_interval_u<-sample_mean+t*sample_sd/sqrt(sample_size)
+confidence_interval<-c(confidence_interval_l,confidence_interval_u)
+confidence_interval
+
+```

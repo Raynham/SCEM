@@ -58,7 +58,7 @@ simulation_df<-crossing(trial=seq(num_trials_per_sample_size), sample_size=seq(m
   mutate(sample_md=map_dbl(.x=simulation,.f=median))%>% # compute the sample medians
   mutate(sample_mean = map_dbl(.x=simulation, .f=mean))%>%
   group_by(sample_size)%>%
-  summarise(msq_error_md=mean((sample_md-mu_0)^2), msq_error_mean1=mean((sample_mean-mu_0)^2),msq_error_mean2=(mean(sample_mean)-mu_0)^2+(mean(sample_mean-mean(sample_mean)))^2)
+  summarise(msq_error_md=mean((sample_md-mu_0)^2), msq_error_mean1=mean((sample_mean-mu_0)^2),msq_error_mean2=(mean(sample_mean)-mu_0)^2+mean((sample_mean-mean(sample_mean))^2))
 
 head(simulation_df)
 
@@ -73,7 +73,7 @@ simulation_df%>%
 simulation_df <- simulation_df%>%
   pivot_longer(cols= - sample_size,names_to = "Estimator", values_to="value")
 simulation_df$Estimator <-factor(simulation_df$Estimator,levels = c('msq_error_mean1','msq_error_mean2','msq_error_md'),labels=c("Mean1","Mean2","Meidan"))
-ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype=Estimator))+geom_point()+geom_smooth() +theme_bw() + xlab("Sample size")+ylab("Mean Square Error")+ylim(0,1)
+ggplot(data=simulation_df, aes(x=sample_size,y=value,color = Estimator, linetype=Estimator))+geom_smooth() +theme_bw() + xlab("Sample size")+ylab("Mean Square Error")
 ```
 
 ## 3  Unbiased estimation of the population variance
