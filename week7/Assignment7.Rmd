@@ -8,16 +8,17 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(palmerpenguins)
+library(Stat2Data)
 library(ggplot2)
 library(dplyr)
+library(PairedData)
+library(purrr)
 ```
 
-### Student’s t-confidence intervals
+## Student’s t-confidence intervals
 
 ```{r}
-adelie_flippers <- penguins %>% filter(species=="Adelie" && !is.na(flipper_length_mm)) %>% select(flipper_length_mm) %>% na.omit()
-adelie_flippers <- as.vector(unlist(adelie_flippers))s
-
+adelie_flippers <- penguins %>% filter(species=="Adelie") %>% pull(flipper_length_mm) %>% na.omit()
 alpha<-0.05
 sample_size<-length(adelie_flippers)
 sample_mean<-mean(adelie_flippers)
@@ -27,5 +28,130 @@ confidence_interval_l<-sample_mean-t*sample_sd/sqrt(sample_size)
 confidence_interval_u<-sample_mean+t*sample_sd/sqrt(sample_size)
 confidence_interval<-c(confidence_interval_l,confidence_interval_u)
 confidence_interval
+
+
+data("Hawks")
+head(Hawks)
+red_tailed_Hawks_weights <- Hawks %>% filter(Species == "RT") %>% pull(Weight)%>% na.omit()
+
+alpha <- 0.01
+sample_size <- length(red_tailed_Hawks_weights)
+sample_mean <- mean(red_tailed_Hawks_weights)
+sample_sd <- sd(red_tailed_Hawks_weights)
+
+t <- qt(1-alpha/2,df=sample_size-1)
+l <- mean(sample_mean-t*sample_sd/sqrt(sample_size))
+u <- mean(sample_mean+t*sample_sd/sqrt(sample_size))
+confidence_interval <- c(l,u)
+confidence_interval
+
+tibble(red_tailed_Hawks_weights) %>% ggplot(aes(x=red_tailed_Hawks_weights))+geom_density()+theme_bw()+labs(x="Weight (grams)", y="density")
+
+
+tibble(red_tailed_Hawks_weights) %>% ggplot(aes(sample=red_tailed_Hawks_weights))+stat_qq()+stat_qq_line(color="blue")+theme_bw()
+```
+
+##### Before deriving the confidence intervals based on T distribution, we suppose the sample data could be subject to normal distribution
+
+
+## 2 One sample t-test
+
+```{r}
+bill_adelie <- penguins %>% filter(species == "Adelie") %>% pull(bill_length_mm) %>% na.omit()
+alpha<- 0.01
+sample_size <- length(bill_adelie)
+sample_mean <- mean(bill_adelie)
+sample_sd <- sd(bill_adelie)
+t<-qt(1-alpha/2,df=sample_size-1)
+l<-sample_mean-t*sample_sd/sqrt(sample_size)
+u<-sample_mean+t*sample_sd/sqrt(sample_size)
+
+confidence_interval <- c(l,u)
+confidence_interval
+
+t.test(bill_adelie,conf.level=0.99,mu=40)
+```
+##### (The sample data is supposed to be subject to normal distribution)
+
+
+## 3 Implementing a one-sample t-test
+
+```{r}
+two_sides_ones_sample_Ttest <- function (X, mu0) {
+  sample_mean <- mean(X)
+  sample_sd <- sd(X)
+  sample_size <- length(X)
+  test_statistic <- (sample_mean-mu0)/(sample_sd/sqrt(sample_size))
+  p_value <- 2*(1-pt(abs(test_statistic), df=sample_size-1))
+  return (p_value)
+}
+two_sides_ones_sample_Ttest(bill_adelie, 40)
+```
+
+
+## 4 The paired t-test
+```{r}
+data("Barley")
+Glabron_yields <- Barley %>% pull(Glabron) %>% na.omit()
+Velvet_yields <- Barley %>% pull(Velvet) %>% na.omit()
+t.test(Glabron_yields,Velvet_yields)
+```
+
+##### Because the significance level is 0.01, but p-value is 0.04101. So, we fail to reject the null hypothesis of $H_0$  (There is difference for these two types of barley on yields.)
+
+```{r}
+diffs <-  Glabron_yields - Velvet_yields
+effect_size <- mean(diffs)/sd(diffs)
+effect_size
+```
+
+##### one sample value should be subject to normal distribution
+
+```{r}
+tibble(diffs) %>% ggplot(aes(x=diffs))+geom_density()+theme_bw()+labs(x="Yields diffs", y="density")
+
+
+tibble(diffs) %>% ggplot(aes(sample=diffs))+stat_qq()+stat_qq_line(color="blue")+theme_bw()
+
+length(diffs)
+```
+
+this case isn't subject to normal distribution (Severe skewed distribution). 
+
+
+
+
+### 5 Investing Coverage for Student's t intervals
+
+```{r}
+student_t_confidence_interval<-function(sample,confidence_level){
+  sample<-sample[!is.na(sample)] # remove any missing values
+  n<-length(sample) # compute sample size
+  mu_est<-mean(sample) # compute sample mean
+  sig_est<-sd(sample) # compute sample sd
+  alpha = 1-confidence_level # alpha from gamma
+  t<-qt(1-alpha/2,df=n-1) # get student t quantile
+  l=mu_est-(t/sqrt(n))*sig_est # lower
+  u=mu_est+(t/sqrt(n))*sig_est # upper
+  return(c(l,u))
+}
+
+num_trials<-100000
+sample_size<-30
+mu_0<-1
+sigma_0<-3
+alpha<-0.05
+set.seed(0) # set random seed for reproducibility
+single_alpha_coverage_simulation_df<-data.frame(trial=seq(num_trials))%>%
+  mutate(sample=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)))%>% # generate random Gaussian samples
+  mutate(ci_interval=map(.x=sample,.f=~student_t_confidence_interval(.x,1-alpha)))%>% # generate confidence intervals
+  mutate(cover=map_lgl(.x=ci_interval,.f=~((min(.x)<=mu_0)&(max(.x)>=mu_0))))%>% # check if interval covers mu_0
+  mutate(ci_length=map_dbl(.x=ci_interval,.f=~(max(.x)-min(.x)))) # compute interval length
+single_alpha_coverage_simulation_df%>%
+  pull(cover)%>%
+  mean() # estimate of coverage probability
+
+
+
 
 ```
