@@ -147,11 +147,9 @@ lambda_MLE <- mean(sample_value)
 sample_value
 lambda_MLE
 ```
-
 ### 6  Maximum likelihood estimation for the exponential distribution
 ```{r}
 customer_purchase_time_data <- read.csv("CustomerPurchases.csv")
-
 customer_purchase_time_data<- customer_purchase_time_data%>%
   mutate(time_diffs = lead(Time)-Time)
 lambda_MLE <- 1/mean(customer_purchase_time_data$time_diffs, na.rm=TRUE)
