@@ -13,6 +13,8 @@ library(ggplot2)
 library(dplyr)
 library(PairedData)
 library(purrr)
+library(tidyr)
+library(PropCIs)
 ```
 
 ## Student’s t-confidence intervals
@@ -53,6 +55,13 @@ tibble(red_tailed_Hawks_weights) %>% ggplot(aes(sample=red_tailed_Hawks_weights)
 
 ##### Before deriving the confidence intervals based on T distribution, we suppose the sample data could be subject to normal distribution
 
+Sample Answer: The Student’s t based confidence intervals for the population mean μ0 were derived based on the assumption
+that the sample X1,...,Xn ∼ N(μ0,σ20) consists of i.i.d. Gaussian observations. It is also reasonable to apply
+this method to other i.i.d. samples, provided that the distribution isn’t too heavy tailed and the sample size n is
+large.
+
+Next we generate a QQ plot. Here we again notice the heavy tails visible within the QQ plot.
+
 
 ## 2 One sample t-test
 
@@ -72,7 +81,8 @@ confidence_interval
 t.test(bill_adelie,conf.level=0.99,mu=40)
 ```
 ##### (The sample data is supposed to be subject to normal distribution)
-
+Sample Answer:  We require that the sample X1,...,Xn and be either Gaussian or have very large sample size n and relatively
+light tails
 
 ## 3 Implementing a one-sample t-test
 
@@ -94,7 +104,7 @@ two_sides_ones_sample_Ttest(bill_adelie, 40)
 data("Barley")
 Glabron_yields <- Barley %>% pull(Glabron) %>% na.omit()
 Velvet_yields <- Barley %>% pull(Velvet) %>% na.omit()
-t.test(Glabron_yields,Velvet_yields)
+t.test(Glabron_yields,Velvet_yields,paired=TRUE,conf.level=0.99)
 ```
 
 ##### Because the significance level is 0.01, but p-value is 0.04101. So, we fail to reject the null hypothesis of $H_0$  (There is difference for these two types of barley on yields.)
@@ -106,7 +116,7 @@ effect_size
 ```
 
 ##### one sample value should be subject to normal distribution
-
+Sample Answer: We assume either that the data is i.i.d. Gaussian or i.i.d. with a large sample size
 ```{r}
 tibble(diffs) %>% ggplot(aes(x=diffs))+geom_density()+theme_bw()+labs(x="Yields diffs", y="density")
 
@@ -117,7 +127,7 @@ length(diffs)
 ```
 
 this case isn't subject to normal distribution (Severe skewed distribution). 
-
+Sample Answer: It seems that the data is approximately Gaussian (although the sample size itself its relatively small). Since the distribution of the data appears approximately Gaussian we are justified in using this approach
 
 
 
@@ -136,21 +146,172 @@ student_t_confidence_interval<-function(sample,confidence_level){
   return(c(l,u))
 }
 
-num_trials<-100000
-sample_size<-30
-mu_0<-1
-sigma_0<-3
-alpha<-0.05
-set.seed(0) # set random seed for reproducibility
-single_alpha_coverage_simulation_df<-data.frame(trial=seq(num_trials))%>%
-  mutate(sample=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)))%>% # generate random Gaussian samples
-  mutate(ci_interval=map(.x=sample,.f=~student_t_confidence_interval(.x,1-alpha)))%>% # generate confidence intervals
-  mutate(cover=map_lgl(.x=ci_interval,.f=~((min(.x)<=mu_0)&(max(.x)>=mu_0))))%>% # check if interval covers mu_0
-  mutate(ci_length=map_dbl(.x=ci_interval,.f=~(max(.x)-min(.x)))) # compute interval length
-single_alpha_coverage_simulation_df%>%
-  pull(cover)%>%
-  mean() # estimate of coverage probability
 
+simulation_study <- function (alpha){
+  num_trials<-1000
+  sample_size<-30
+  mu_0<-1
+  sigma_0<-3
+  set.seed(0) # set random seed for reproducibility
+  single_alpha_coverage_simulation_df<-data.frame(trial=seq(num_trials))%>%
+    mutate(sample=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)))%>% # generate random Gaussian samples
+    mutate(ci_interval=map(.x=sample,.f=~student_t_confidence_interval(.x,1-alpha)))%>% # generate confidence intervals
+    mutate(cover=map_lgl(.x=ci_interval,.f=~((min(.x)<=mu_0)&(max(.x)>=mu_0))))%>% # check if interval covers mu_0
+    mutate(ci_length=map_dbl(.x=ci_interval,.f=~(max(.x)-min(.x)))) # compute interval length
+  mean_ci_prob <- single_alpha_coverage_simulation_df%>%pull(cover)%>%mean() # estimate of coverage probability
+  mean_ci_length <- single_alpha_coverage_simulation_df%>%pull(ci_length)%>%mean() 
+  return (c(mean_ci_prob,mean_ci_length))
+}
+
+alpha_max <- 0.99
+simulation_df <- data.frame(alpha=seq(from=0.01,to=1,by=0.01)) %>%
+  mutate(gamma=1-alpha)%>%
+  mutate(mean_ci_prob = map(.x=alpha,.f= ~simulation_study(.x)[1]), mean_ci_length=map(.x=alpha,.f= ~simulation_study(.x)[2]))
+head(simulation_df)
+
+simulation_df$mean_ci_prob=as.numeric(simulation_df$mean_ci_prob)
+simulation_df$mean_ci_length=as.numeric(simulation_df$mean_ci_length)
+
+simulation_df %>% ggplot()+geom_smooth(aes(x=gamma, y=mean_ci_prob))+theme_bw()+labs(x="1-alpha", y="probability of confidence intervals")
+
+simulation_df %>% ggplot()+geom_smooth(aes(x=gamma, y=round(mean_ci_length,4)))+theme_bw()+labs(x="1-alpha", y="length of confidence intervals")
+```
+
+
+### 6 (Optional) Wilson’s confidence interval for proportions
+```{r}
+RT_Weight<- Hawks %>% filter(Species=="RT")%>% pull(Weight) %>% na.omit()
+alpha <- 0.05
+num_over_one_Kilo <- length(which(RT_Weight>1000))
+sample_size<-length(RT_Weight)
+scoreci(x=num_over_one_Kilo, n=sample_size, conf.level=1-alpha)
+
+```
+
+### 7 (Optional) The Binomial test
+
+```{r}
+library(Stat2Data)
+data("Airlines")
+Arrivals_Delta_ORD_Result<- Airlines %>%
+  subset(airline=="Delta"& airport=="ORD",select=OnTime)
+
+num_onTime <- length(which(Arrivals_Delta_ORD_Result$OnTime=="yes"))
+sample_size <- length(Arrivals_Delta_ORD_Result$OnTime)
+alpha<- 0.01
+binom.test(num_onTime,sample_size,p=0.875,conf.level=1-alpha)
+```
+the sample value (the probability of airlines arrives on time in each sample set) are subject to normal distribution and n*p>5
+
+
+### 8 (Optional) Bootstrap confidence intervals
+
+
+```{r}
+library(boot) # load the library
+set.seed(123) # set random seed
+#first define a function which computes the mean of a column of interest
+compute_mean<-function(df,indicies,col_name){
+  sub_sample<-df%>%slice(indicies)%>%pull(all_of(col_name)) # extract sub sample
+  return(mean(sub_sample,na.rm=1))}# return mean
+# use the boot function to generate the bootstrap statistics
+results<-boot(data = penguins,statistic =compute_mean,col_name="body_mass_g",R = 1000)
+# compute the 95%-level confidence interval for the mean
+boot.ci(boot.out = results, type = "basic",conf=0.95)
+```
+
+The random seed is for reproducibility. The bootstrap approach assumes the data is generated independently and identically distributed from some distribution.
+
+
+```{r}
+set.seed(123)
+compute_median<- function(df,indicies,col_name){
+  sub_sample<-df%>%slice(indicies)%>%pull(all_of(col_name))
+  return(median(sub_sample,na.rm=1))
+}
+result<-boot(data = Hawks, statistic = compute_median, col_name="Weight", R=1000)
+boot.ci(boot.out = result, type = "basic",conf=0.99)
+
+
+set.seed(123)
+result_penguins<-boot(data = penguins, statistic = compute_mean, col_name="body_mass_g", R=1000)
+boot.ci(boot.out = result_penguins, type = "basic",conf=0.99)
+
+result_hawks<-boot(data = Hawks, statistic = compute_mean, col_name="Weight", R=1000)
+boot.ci(boot.out = result_hawks, type = "basic",conf=0.99)
+
+```
+Assuming these samples are representative, given that the confidence do not intersect and the interval for Hawks is below that for penguins, we have good evidence that the average Hawk weight is below the average penguin weight
+
+
+### 9  (Optional) Investigating the failure probability for Wilson’s method
+```{r}
+
+n <- 100
+q <-0.5
+num_trials_per_alpha <- 1000
+alpha <- 0.01
+simulation_studys <- crossing(trial=seq(num_trials_per_alpha),alpha=seq(alpha,1,0.01))%>%
+  mutate(sample = pmap(.l=list(trial,alpha), .f=~ rbinom(n,1,0.5)))%>%
+  mutate(wilson_cf = pmap(.l=list(sample,alpha), .f= ~ unlist(scoreci(sum(.x), n, 1-.y))))%>%
+  mutate(cf_l=map_dbl(wilson_cf,min),cf_u=map_dbl(wilson_cf,max))%>%
+  mutate(coverage = as.integer(cf_l <= q&cf_u >= q))%>%
+  ##mutate(cf_miss=as.integer(cf_l>q|cf_u<q))%>%
+  group_by(alpha)%>%
+  ##summarise(cf_miss = mean(cf_miss))
+  summarise(coverage_mean = mean(coverage))
+simulation_studys%>%ggplot(aes(x=alpha,y=coverage_mean))+geom_smooth(method="lm")+ labs(x="Alpha",y="Coverage")
+```
+
+
+### 10 (Optional) Effect size for the one sample t-test
+
+```{r}
+
+bill_adelie<-penguins%>%
+filter(species=="Adelie")%>%
+pull(bill_length_mm)%>%
+na.omit()
+
+effect_size_one_sample_t_test <- function (X, mu){
+  return( (mean(X)-mu)/sd(X))
+}
+effect_size_one_sample_t_test(bill_adelie,40)
+```
+
+medium effect
+
+
+
+### 11 (Optional) Confidence intervals for the exponential distribution
+
+```{r}
+exp_confidence_interval<-function(Sample,confidence_level){
+  sample_mean<-mean(Sample)
+  alpha <- 1-confidence_level
+  Z_alpha <- qnorm(1-alpha/2)
+  Ci_l <- 1/sample_mean *(1-Z_alpha/sqrt(length(Sample)))
+  ci_u<- 1/sample_mean *(1+Z_alpha/sqrt(length(Sample)))
+  return(c(Ci_l,ci_u))
+}
+
+num_trials_per_alpha<-100
+sample_size<-100
+lambda_0<-5
+alpha_min<-0.0025
+alpha_max<-0.25
+alpha_inc<-0.0025
+set.seed(0) # set random seed for reproducibility
+coverage_simulation_exp_cis_df<-crossing(trial=seq(num_trials_per_alpha),alpha=seq(alpha_min,alpha_max,alpha_inc))%>%
+  mutate(sample=map(.x=trial,.f=~rexp(n=sample_size,rate=lambda_0)))%>%
+  mutate(gamma=1-alpha)%>% # generate random exponential
+  mutate(ci_interval=map2(.x=sample,.y=gamma,.f=~exp_confidence_interval(.x,.y)))%>% # generate confidence intervals
+  mutate(cover=map_lgl(.x=ci_interval, .f=~((min(.x)<=lambda_0)&(max(.x)>=lambda_0))))%>% # check if interval covers mu_0
+  mutate(ci_length=map_dbl(.x=ci_interval,.f=~(max(.x)-min(.x))))%>% # compute interval length
+  group_by(gamma)%>%
+  summarise(coverage=mean(cover),mean_length=mean(ci_length))
+coverage_simulation_exp_cis_df%>%
+  ggplot(aes(x=gamma,y=coverage))+geom_smooth()+xlab("Confidence level (%)")+ylab("Coverage")+theme_bw()
 
 
 
