@@ -12,6 +12,7 @@ library(dplyr)
 library(PairedData)
 library(purrr)
 library(tidyr)
+library(palmerpenguins)
 ```
 
 ## 1. Obstacles to valid scientific inference
@@ -78,10 +79,312 @@ t.test(body_mass_g~species, data = peng_AC, var.equal=TRUE)
 
 
 ## 3.Statistical hypothesis testing  
-      1.Null hypothesis: 
+      1.Null hypothesis: The null hypothesis is our default position typically declaring an absence of an interesting phenomena.
+      2. Alternative hypothesis: The alternative hypothesis is the of something interesting difference we’d like to demonstrate.
+      3. Test statistic: it's used for determining if the null hypothesis should be rejected or not. The value for test statistics can be compared with the expected results under the null hypothesis.
+      4. Type 1 error: it refers to that wrongly rejects the null hypothesis but the null hypothesis is true.
+      5. Type 2 error: it refers to that we fail to reject the null hypothesis but the null hypothesis is wrong.
+      6. The test size: it is the probability of Type I error under the null hypothesis.
+      7. The power of test: it is the probability of ( 1- Type II error under the alternative hypothesis).
+      8. The significance level: permitting the probability of making the type 1 error. can be taken as the risk which can be undertaken or the critical level.
+      9. P value: The probability of the statistics appearing the extreme value.
+      10. Effect size: The effect size is a measure for quantifying the magnitude of the observed phenomena
+
+#### Is the p-value the probability that the null hypothesis is true?   
+
+P value is the probability of misjudge H0 as false under rejecting H0. If the p value is smaller, which indicates the  the probability of misjudgment to H0 is smaller, and you are more confident to reject H0 and accept H1.
+
+p-value = P(H0 is true | rejecting H0) 
+
+
+#### If I conduct a statistical hypothesis test, and my p-value exceeds the significance level, do I have good evidence that the null hypothesis is true?
+
+We still can not say the null hypothesis is true, we just can say we have no enough evidence to reject the null hypothesis.
+
+
+## 4 Investigating test size for an unpaired Student’s t-test
+
+The significance level wasn’t supplied as an argument. Is this a problem?   
+  If the significance level (confidence level) is not specified, the default is conf.level = 0.95
+  
+
+```{r}
+num_trials<-1000
+sample_size<-30
+mu_0<-1
+mu_1<-1
+sigma_0<-3
+sigma_1<-3
+alpha<-0.05
+set.seed(0) # set random seed for reproducibility
+single_alpha_test_size_simulation_df<-data.frame(trial=seq(num_trials))%>%
+  mutate(sample_0=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)), sample_1=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_1,sd=sigma_1)))%>%
+  # generate random Gaussian samples
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1), .f=~t.test(..2,..3,var.equal = TRUE)$p.value))%>%
+# generate p values
+  mutate(type_1_error=p_value<alpha)
+single_alpha_test_size_simulation_df%>%
+  pull(type_1_error)%>%
+  mean() # estimate of coverage probability
+
+num_trials_per_alpha<-100
+sample_size<- 30
+alpha_min<-0.0025
+alpha_max<-0.25
+alpha_inc<-0.0025
+set.seed(0)
+test_size_per_alpha_simulation_df<- crossing(trial=seq(num_trials_per_alpha),alpha=seq(alpha_min,alpha_max,alpha_inc))%>%
+  mutate(sample_0=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)), sample_1=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_1,sd=sigma_1)))%>%
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1), .f = ~t.test(..2,..3,var.equal=TRUE)$p.value)) %>%
+  mutate(type_1_error=p_value<alpha)%>%
+  group_by(alpha)%>%
+    summarize(test_size = mean(type_1_error))
+head(test_size_per_alpha_simulation_df)
+
+test_size_per_alpha_simulation_df%>%
+  ggplot(aes(x=alpha,y=test_size))+geom_smooth()+xlab("significance level")+ylab("Test Size")+theme_bw()
+```
+
+
+### 5 The power of an unpaired t-test
+
+```{r}
+num_trials<-100
+n_0<-30
+n_1<-30
+mu_0<-3
+mu_1<-4
+sigma_0<-2
+sigma_1<-2
+alpha<-0.05
+set.seed(0) # set random seed for reproducibility
+data.frame(trial=seq(num_trials))%>%
+  mutate(sample_0=map(.x=trial,.f=~rnorm(n=n_0,mean=mu_0,sd=sigma_0)), sample_1=map(.x=trial,.f=~rnorm(n=n_1,mean=mu_1,sd=sigma_1)))%>%
+  # generate random Gaussian samples
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1), .f=~t.test(..2,..3,var.equal = TRUE)$p.value))%>%
+  # generate p values
+  mutate(reject_null=p_value<alpha)%>%
+  pull(reject_null)%>%
+  mean() # estimate of coverage probability
+
+num_trials_per_alpha<-100
+sample_size<- 30
+alpha_min<-0.0025
+alpha_max<-0.25
+alpha_inc<-0.0025
+set.seed(0)
+test_power_per_alpha_simulation_df<- crossing(trial=seq(num_trials_per_alpha),alpha=seq(alpha_min,alpha_max,alpha_inc))%>%
+  mutate(sample_0=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma_0)), sample_1=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_1,sd=sigma_1)))%>%
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1), .f = ~t.test(..2,..3, var.equal=TRUE)$p.value))%>%
+  mutate(reject_null=p_value<alpha)%>%
+  group_by(alpha)%>%
+    summarize(test_power = mean(reject_null))
+head(test_power_per_alpha_simulation_df)
+
+test_power_per_alpha_simulation_df%>%
+  ggplot(aes(x=alpha,y=test_power))+geom_smooth()+xlab("significance level")+ylab("Test Power")+theme_bw()
+
+
+num_trials_per_mean<-100
+sample_size<- 30
+mean_min<-0
+mean_inc<-0.1
+mean_max<-5
+sigma<- 2
+alpha<-0.05
+mu_0<-3
+set.seed(0)
+test_power_per_mean_simulation_df<- crossing(trial=seq(num_trials_per_mean),difference_mean=seq(mean_min,mean_max,mean_inc))%>%
+  mutate(sample_0=map(.x=trial,.f=~rnorm(n=sample_size,mean=mu_0,sd=sigma)), sample_1=map2(.x=trial, .y=difference_mean, .f=~rnorm(n=sample_size,mean = mu_0 + .y, sd = sigma)))%>%
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1), .f = ~t.test(..2,..3,var.equal=TRUE)$p.value))%>%
+  mutate(reject_null=p_value<alpha)%>%
+  group_by(difference_mean)%>%
+    summarize(test_power = mean(reject_null))
+head(test_power_per_mean_simulation_df)
+
+test_power_per_mean_simulation_df%>%
+  ggplot(aes(x=difference_mean,y=test_power))+geom_smooth()+xlab("Difference in means")+ylab("Test Power")+theme_bw()
+
+num_trials_per_sd<-100
+sample_size<- 30
+sd_min<-0.1
+sd_inc<-0.01
+sd_max<-3
+mu_0<- 3
+mu_1<- 4
+alpha<-0.05
+set.seed(0)
+test_power_per_sd_simulation_df<- crossing(trial=seq(num_trials_per_mean),sd=seq(sd_min,sd_max,sd_inc))%>%
+  mutate(sample_0=pmap(.l=list(trial,sd),.f=~rnorm(n=sample_size,mean=mu_0,sd=..2)), sample_1=pmap(.l=list(trial,sd),.f=~rnorm(n=sample_size,mean=mu_1,sd=..2)))%>%
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1,sd), .f = ~t.test(..2,..3,var.equal=TRUE)$p.value))%>%
+  mutate(reject_null=p_value<alpha)%>%
+  group_by(sd)%>%
+    summarize(test_power = mean(reject_null))
+head(test_power_per_sd_simulation_df)
+
+test_power_per_sd_simulation_df%>%
+  ggplot(aes(x=sd,y=test_power))+geom_smooth()+xlab("Standard deviation")+ylab("Test Power")+theme_bw()
+
+
+num_trials_per_sample_size<-100
+sample_size_min<- 5
+sample_size_max<-300
+sample_size_inc<-5
+sd<-2
+mu_0<-3
+mu_1<-4
+alpha<-0.05
+set.seed(0)
+test_power_per_sample_size_df<- crossing(trial=seq(num_trials_per_mean),sample_size=seq(sample_size_min,sample_size_max,sample_size_inc))%>%
+  mutate(sample_0=pmap(.l=list(trial,sample_size),.f=~rnorm(n=..2,mean=mu_0,sd=sd)), sample_1=pmap(.l=list(trial,sample_size),.f=~rnorm(n=..2,mean=mu_1,sd=sd)))%>%
+  mutate(p_value=pmap(.l=list(trial,sample_0,sample_1,sample_size), .f = ~t.test(..2,..3,var.equal=TRUE)$p.value))%>%
+  mutate(reject_null=p_value<alpha)%>%
+  group_by(sample_size)%>%
+    summarize(test_power = mean(reject_null))
+head(test_power_per_sample_size_df)
+
+test_power_per_sample_size_df%>%
+  ggplot(aes(x=sample_size,y=test_power))+geom_smooth()+xlab("sample_size")+ylab("Test Power")+theme_bw()
+```
 
 
 
+## 6. Comparing the paired and unpaired t-tests (Optional)
+
+```{r}
+num_trials<-1000
+sample_size<-30
+mu_x<-3
+mu_z<-1
+sigma_x<-2
+sigma_z<-2
+alpha<-0.05
+
+mu_y <- mu_x+mu_z
+sigma_y <- sqrt(sigma_x^2+sigma_z^2)
+
+alpha_min<-0.0025
+alpha_max<-0.25
+alpha_inc<-0.0025
+set.seed(0) 
+test_power_per_alpha_simulation_df <- crossing(trial = seq(num_trials), 
+                                               alpha=seq(alpha_min, alpha_max, alpha_inc))%>%
+  mutate(sample_X = pmap(.l=list(trial,alpha), 
+                         .f = ~rnorm(sample_size,mu_x,sd=sigma_x)),
+         sample_Y = pmap(.l=list(trial,alpha), 
+                         .f=~rnorm(sample_size,mu_y,sd=sigma_y)))%>%
+  mutate(p_value_paired = pmap_dbl(.l=list(trial,sample_X,sample_Y,alpha),
+                               .f= ~t.test(..2,..3,paired=TRUE)$p.value))%>%
+  mutate(p_value_unpaired = pmap_dbl(.l =list(trial,sample_X,sample_Y,alpha), 
+                                 .f = ~t.test(..2,..3, paired=FALSE)$p.value))%>%
+  mutate(reject_null_paired = p_value_paired < alpha)%>%
+  mutate(reject_null_unpaired = p_value_unpaired < alpha)%>%
+  group_by(alpha)%>%
+  summarize(test_power_paired=mean(reject_null_paired),
+            test_power_unpaired=mean(reject_null_unpaired))
+ 
+test_power_per_alpha_simulation_df <- test_power_per_alpha_simulation_df%>%
+   pivot_longer(cols=c(test_power_paired,test_power_unpaired),names_to = "Type", values_to = "Test_Power")
+
+ggplot(data=test_power_per_alpha_simulation_df,aes(x=alpha,y=Test_Power, color = Type, linetype = Type)) + geom_point() + theme_bw() 
+
+
+
+test_power_per_alpha_simulation_df2 <- crossing(trial = seq(num_trials), 
+                                               alpha=seq(alpha_min, alpha_max, alpha_inc))%>%
+  mutate(sample_X = pmap(.l=list(trial,alpha), 
+                         .f = ~rnorm(sample_size,mu_x,sd=sigma_x)),
+         sample_Z = pmap(.l=list(trial,alpha), 
+                         .f=~rnorm(sample_size,mu_z,sd=sigma_z)))%>%
+  mutate(sample_Y = pmap(.l = list(sample_X,sample_Z),
+                         .f = ~(..1+..2)))%>%
+  mutate(p_value_paired = pmap_dbl(.l=list(trial,sample_X,sample_Y,alpha),
+                               .f= ~t.test(..2,..3, paired=TRUE)$p.value))%>%
+  mutate(p_value_unpaired = pmap_dbl(.l =list(trial,sample_X,sample_Y,alpha), 
+                                 .f = ~t.test(..2,..3, paired=FALSE)$p.value))%>%
+  mutate(reject_null_paired = p_value_paired < alpha)%>%
+  mutate(reject_null_unpaired = p_value_unpaired < alpha)%>%
+  group_by(alpha)%>%
+  summarize(test_power_paired=mean(reject_null_paired),
+            test_power_unpaired=mean(reject_null_unpaired))
+
+test_power_per_alpha_simulation_df2 <- test_power_per_alpha_simulation_df2%>%
+  pivot_longer(cols=c(test_power_paired,test_power_unpaired),names_to = "Type", values_to = "Test_Power")
+ggplot(data=test_power_per_alpha_simulation_df2,aes(x=alpha,y=Test_Power,color =Type,linetype= Type)) + geom_point() + theme_bw() 
+
+
+
+num_trials_per_scenario<-100
+n<-30
+mu_X<-3
+mu_Z<-1
+sigma_X<-2
+sigma_Z<-2
+alpha_min<-0.0025
+alpha_max<-0.25
+alpha_inc<-0.0025
+set.seed(0) # set random seed for reproducibility
+crossing(trial=seq(num_trials_per_scenario), alpha=seq(alpha_min,alpha_max,alpha_inc))%>%
+  mutate(sample_X=map(.x=trial,.f=~rnorm(n=n,mean=mu_X,sd=sigma_X)),
+         sample_Z=map(.x=trial,.f=~rnorm(n=n,mean=mu_Z,sd=sigma_Z)))%>%
+  mutate(sample_Y=pmap(.l=list(sample_X,sample_Z),.f=~(..1+..2)))%>% # generate random Gaussian samples
+  mutate(p_value_paired=pmap_dbl(.l=list(sample_X,sample_Y),
+                                 .f=~t.test(..1,..2,paired=TRUE)$p.value),
+         p_value_unpaired=pmap_dbl(.l=list(sample_X,sample_Y),
+                                   .f=~t.test(..1,..2,paired=FALSE)$p.value))%>% 
+  # generate p values
+  rename(paired=p_value_paired,unpaired=p_value_unpaired)%>%
+  pivot_longer(cols=c(paired,unpaired),
+               names_to="Method",values_to = "p_value")%>%
+  mutate(reject_null=p_value<alpha)%>%
+  group_by(alpha,Method)%>%
+  summarise(statistical_power=mean(reject_null))%>%
+  ggplot(aes(x=alpha,y=statistical_power,color=Method,linetype=Method))+
+  geom_smooth()+xlab("Significance level (%)")+ylab("Power")+
+  theme_bw()
+```
+
+## 7. A chi-squared test of population variance (Optional)
+
+```{r}
+chi_square_test_one_sample_var <- function (sample, sigma_square_null){
+  sample<- sample[!is.na(sample)]
+  n <- length(sample)
+  chi_squared_statistic <- (n-1)*var(sample)/sigma_square_null
+  p_value <- 2*min(pchisq(chi_squared_statistic,df=n-1),
+                   1-pchisq(chi_squared_statistic,df=n-1))
+  return(p_value)
+}
+
+alpha_min<-0.0025
+alpha_max<-0.25
+alpha_inc<-0.0025
+set.seed(0)
+num_trials_per_alpha<-100
+sample_size<- 30
+sd <- 3
+var_null <- 9
+mu <- 1
+test_size_per_alpha_variance_simulation_df <- crossing(trial = seq(num_trials_per_alpha), alpha = seq(alpha_min,alpha_max,alpha_inc))%>%
+  mutate(sample = map(.x=trial, .f = ~rnorm(sample_size,mu,sd)))%>%
+  mutate(p_value = pmap(.l=list(trial,sample), .f=~chi_square_test_one_sample_var(..2,var_null)))%>%
+  mutate(reject_null = p_value<alpha)%>%
+  group_by(alpha)%>%
+  summarize(test_size = mean(reject_null))
+test_size_per_alpha_variance_simulation_df %>%
+  ggplot(aes(x=alpha,y=test_size))+geom_smooth()+theme_bw()
+
+bill_adelie <- penguins %>% 
+  filter(species == "Adelie") %>%
+  pull(bill_length_mm)%>%
+  na.omit()
+
+mu_0 <- mean(bill_adelie)
+alpha <- 0.1
+sd <- 3
+p_value <- chi_square_test_one_sample_var(bill_adelie,sd^2)
+p_value
+```
 
 
 
