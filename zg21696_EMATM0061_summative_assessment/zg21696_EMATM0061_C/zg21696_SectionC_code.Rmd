@@ -1,0 +1,102 @@
+---
+title: "zg21696_SectionC_code"
+author: "Ruinan Wang"
+date: "13/12/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(kknn)
+library(tidyverse)
+```
+
+## Importing Data and pretreatment
+
+```{r}
+breast_cancer_ds <- read.csv("data.csv", header = TRUE)
+## The column id and X don't affect the prediction, so delete them from dataset
+breast_cancer_ds <- breast_cancer_ds %>% select(-c(id,X)) 
+## The number of features and samples
+dim(breast_cancer_ds)
+## Convert the value of the categorical variable "diagnosis" to a numerical value where M = 1 and B = 0.
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'M')] <- 1
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'B')] <- 0
+
+## The magnitude for some features have a significant gap, like "radius_mean" and "area_mean"
+head(select(breast_cancer_ds,symmetry_mean,area_mean),3)
+## The feature-scaling is necessary
+## here we used normalization through creating a function
+standardization <- function (x){
+  return((x-mean(x))/(sd(x)))
+}
+bc_df <- as.data.frame(lapply(breast_cancer_ds[2:31],standardization))
+breast_cancer_ds <- cbind(breast_cancer_ds[1],bc_df)
+
+## Then the dataset need to do the train-validation-test split for the following RandomizedSearchCV task
+num_total <- breast_cancer_ds %>% nrow()
+num_test <- ceiling(0.25*num_total)
+set.seed(12)
+breast_cancer_ds <- breast_cancer_ds %>% sample_n(size=nrow(.))
+test_inds <- seq(num_total-num_test+1,num_total)
+test_data <- breast_cancer_ds %>% filter (row_number()%in%test_inds)
+train_validation_data <- breast_cancer_ds %>% filter(!row_number() %in% test_inds)
+```
+
+## Hyperparameter Tuning through RandomizedSearchCV
+In this part, an external package named RandomSearchR by MOUSELIMIS is used for implementing RandomizedSearchCV to tune hyperparameter.
+
+```{r}
+library(RandomSearchR)
+## list all choices of hyperparameter
+grid_kknn = list(k = 3:20, 
+                 distance = 1:5,
+                 kernel = c("rectangular", "triangular", "epanechnikov", "biweight", "triweight","cos", "inv", "gaussian", "rank", "optimal"))
+
+## make diagnosis results the numerical value
+diagnosis_vec = train_validation_data[,1]
+diagnosis_vec = c(1:length(unique(diagnosis_vec)))[match(diagnosis_vec, sort(unique(diagnosis_vec)))]
+data_vec = train_validation_data[,-1]
+## create a formula for the following random_search_resample function
+form <- as.formula(paste('diagnosis ~', paste(names(data_vec),collapse = '+')))
+
+ALL_DATA = train_validation_data
+ALL_DATA$diagnosis = as.factor(diagnosis_vec)
+
+## execute the random search CV
+res_knn = random_search_resample(
+  as.factor(diagnosis_vec),
+  tune_iters = 30,
+  resampling_method = list(method = 'cross_validation',
+                           repeats=NULL, 
+                           sample_rate = NULL,
+                           folds = 5),
+  ALGORITHM = list(package = require(kknn), algorithm = kknn),
+  grid_params = grid_kknn,
+  DATA = list(formula = form, train = ALL_DATA),
+  Args = NULL,
+  regression = FALSE,
+  re_run_params=FALSE
+)
+
+acc = function(y_true, preds) {             
+  out = table(y_true, max.col(preds, ties.method = "random"))
+  acc = sum(diag(out))/sum(out)
+  acc
+}
+
+perf = performance_measures(list_objects = list(kknn = res_knn),
+                            eval_metric = acc,
+                            sort = list(variable = 'Median', decreasing = TRUE))
+bst_m = subset_mods(perf_meas_OBJ = perf, bst_mods = 5, train_params = FALSE)
+
+perf$test_params
+
+bst_m
+```
+
+
+
+
+
+
