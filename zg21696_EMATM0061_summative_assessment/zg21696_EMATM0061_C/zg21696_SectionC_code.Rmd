@@ -2,11 +2,11 @@
 title: "zg21696_SectionC_code"
 author: "Ruinan Wang"
 date: "13/12/2021"
-output: word_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(kknn)
 library(tidyverse)
 ```
@@ -88,15 +88,15 @@ acc = function(y_true, preds) {
 perf = performance_measures(list_objects = list(kknn = res_knn),
                             eval_metric = acc,
                             sort = list(variable = 'Median', decreasing = TRUE))
-bst_m = subset_mods(perf_meas_OBJ = perf, bst_mods = 5, train_params = FALSE)
+head(perf$test_params$kknn,10)
 
-perf$test_params
-
-bst_m
 ```
 
 
+Based on the table above, the optimal hyperparameters should be k=8, p_distance = 3, kernel function="Gaussian".
 
+
+## Explore the 
 
 
 
