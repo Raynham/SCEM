@@ -15,8 +15,9 @@ library(tidyverse)
 
 ```{r}
 breast_cancer_ds <- read.csv("data.csv", header = TRUE)
+head(breast_cancer_ds)
 ## The column id and X don't affect the prediction, so delete them from dataset
-breast_cancer_ds <- breast_cancer_ds %>% select(-c(id,X)) 
+breast_cancer_ds <- breast_cancer_ds %>% select(-c(id)) 
 ## The number of features and samples
 dim(breast_cancer_ds)
 ## Convert the value of the categorical variable "diagnosis" to a numerical value where M = 1 and B = 0.
@@ -36,7 +37,7 @@ breast_cancer_ds <- cbind(breast_cancer_ds[1],bc_df)
 ## Then the dataset need to do the train-validation-test split for the following RandomizedSearchCV task
 num_total <- breast_cancer_ds %>% nrow()
 num_test <- ceiling(0.25*num_total)
-set.seed(12)
+set.seed(1)
 breast_cancer_ds <- breast_cancer_ds %>% sample_n(size=nrow(.))
 test_inds <- seq(num_total-num_test+1,num_total)
 test_data <- breast_cancer_ds %>% filter (row_number()%in%test_inds)
@@ -45,7 +46,6 @@ train_validation_data <- breast_cancer_ds %>% filter(!row_number() %in% test_ind
 
 ## Hyperparameter Tuning through RandomizedSearchCV
 In this part, an external package named RandomSearchR by MOUSELIMIS is used for implementing RandomizedSearchCV to tune hyperparameter.
-
 ```{r}
 library(RandomSearchR)
 ## list all choices of hyperparameter
@@ -63,7 +63,7 @@ form <- as.formula(paste('diagnosis ~', paste(names(data_vec),collapse = '+')))
 ALL_DATA = train_validation_data
 ALL_DATA$diagnosis = as.factor(diagnosis_vec)
 
-## execute the random search CV
+## execute the random search cross validation
 res_knn = random_search_resample(
   as.factor(diagnosis_vec),
   tune_iters = 30,
@@ -78,25 +78,58 @@ res_knn = random_search_resample(
   regression = FALSE,
   re_run_params=FALSE
 )
+```
+### Because the problem we explore is a binary classification and the dataset is not so unbalanced (benign : malignant = 357:212), so accurancy is chosen as the metric for the performance of the model.
 
-acc = function(y_true, preds) {             
+Accurancy=$TP+TN\over ALL$ TP means True Positive, the number of predicting correctly the tumor is malignant TN means True Negative, the number of predicting correctly the tumor is benign.
+```{r}
+##computing accurancy
+acc = function(y_true, preds) { 
   out = table(y_true, max.col(preds, ties.method = "random"))
   acc = sum(diag(out))/sum(out)
   acc
 }
 
+##Obtaining the evaluation result for performance of this KNN classifier
 perf = performance_measures(list_objects = list(kknn = res_knn),
                             eval_metric = acc,
-                            sort = list(variable = 'Median', decreasing = TRUE))
-head(perf$test_params$kknn,10)
+                            sort = list(variable = 'Mean', decreasing = TRUE))
+accurancy_validation_table = perf$test_params$kknn %>% select(k,distance,kernel,accurancy=Mean)
+accurancy_train_table = perf$train_params$kknn %>% select(k,distance,kernel,accurancy=Mean)
+head(accurancy_validation_table,10)
 
 ```
 
 
-Based on the table above, the optimal hyperparameters should be k=8, p_distance = 3, kernel function="Gaussian".
+The table above is the accuracy of the validation data for model with different hyperparameters, so the optimal hyperparameters should be k=10, p_distance = 3, kernel function="epanechnikov".
 
 
-## Explore the 
+## Explore how the performance of model varies when the amount of training dataset change.
+
+After defining the hyperparameters, this exploration will require a adjusted cross-validation method 
+
+```{r}
+adjusted_cross_validation_splitData = function(data,folds){
+  num = data%>%nrow()
+  num_per_fold = ceiling(num/folds)
+  validation_ds = list()
+  train_ds = list()
+  for (fold in 1:folds) {
+    fold_start = (fold-1)*num_per_fold+1
+    fold_end = min(fold*num_per_fold,num)
+    fold_indicies = seq(fold_start,fold_end)
+    validation_ds[[fold]] = data%>%filter(row_number()%in%fold_indicies)
+    train_ds[[fold]] = data%>%filter(!row_number()%in%fold_indicies)
+  }
+  
+  return(list(train=train_ds,vali=validation_ds))
+}
+
+train_data_decrease = function(){
+  decrease_indicies <- 10
+}
+
+```
 
 
 
