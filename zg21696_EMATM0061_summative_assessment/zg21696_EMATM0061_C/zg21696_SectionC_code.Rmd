@@ -126,7 +126,10 @@ adjusted_cross_validation_splitData = function(data,folds){
 }
 
 train_data_decrease = function(){
+  
   decrease_indicies <- 10
+  
+  
 }
 
 ```
