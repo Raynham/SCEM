@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(kknn)
 library(tidyverse)
+library(dplyr)
 ```
 
 ## Importing Data and pretreatment
@@ -16,14 +17,14 @@ library(tidyverse)
 ```{r}
 breast_cancer_ds <- read.csv("data.csv", header = TRUE)
 head(breast_cancer_ds)
-## The column id and X don't affect the prediction, so delete them from dataset
+## The column id don't affect the prediction, so delete them from dataset
 breast_cancer_ds <- breast_cancer_ds %>% select(-c(id)) 
-## The number of features and samples
+## The number of samples and features
 dim(breast_cancer_ds)
-## Convert the value of the categorical variable "diagnosis" to a numerical value where M = 1 and B = 0.
-breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'M')] <- 1
-breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'B')] <- 0
-
+## Convert the value of the categorical variable "diagnosis" to a numerical value where B = 1 and M = 0.
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'B')] <- 1
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'M')] <- 0
+breast_cancer_ds$diagnosis=as.numeric(breast_cancer_ds$diagnosis)
 ## The magnitude for some features have a significant gap, like "radius_mean" and "area_mean"
 head(select(breast_cancer_ds,symmetry_mean,area_mean),3)
 ## The feature-scaling is necessary
@@ -53,7 +54,7 @@ grid_kknn = list(k = 3:20,
                  distance = 1:5,
                  kernel = c("rectangular", "triangular", "epanechnikov", "biweight", "triweight","cos", "inv", "gaussian", "rank", "optimal"))
 
-## make diagnosis results the numerical value
+## make diagnosis results become numerical value (1,2)
 diagnosis_vec = train_validation_data[,1]
 diagnosis_vec = c(1:length(unique(diagnosis_vec)))[match(diagnosis_vec, sort(unique(diagnosis_vec)))]
 data_vec = train_validation_data[,-1]
@@ -63,7 +64,7 @@ form <- as.formula(paste('diagnosis ~', paste(names(data_vec),collapse = '+')))
 ALL_DATA = train_validation_data
 ALL_DATA$diagnosis = as.factor(diagnosis_vec)
 
-## execute the random search cross validation
+## execute the RandomizedSearchCV of which the number of randomly sampling hyperparameter combinations (iteration) is 30 and K-folds for crossing validation is 5.
 res_knn = random_search_resample(
   as.factor(diagnosis_vec),
   tune_iters = 30,
@@ -79,11 +80,11 @@ res_knn = random_search_resample(
   re_run_params=FALSE
 )
 ```
-### Because the problem we explore is a binary classification and the dataset is not so unbalanced (benign : malignant = 357:212), so accurancy is chosen as the metric for the performance of the model.
+### Because the problem we explore is a binary classification and the dataset is not so unbalanced (benign : malignant = 357:212), so accuracy is chosen as the metric for the performance of the model rather than AUC value.
 
-Accurancy=$TP+TN\over ALL$ TP means True Positive, the number of predicting correctly the tumor is malignant TN means True Negative, the number of predicting correctly the tumor is benign.
+Accuracy=$TP+TN\over ALL$ TP means True Positive, the number of predicting correctly the tumor is malignant TN means True Negative, the number of predicting correctly the tumor is benign.
 ```{r}
-##computing accurancy
+##computing accuracy
 acc = function(y_true, preds) { 
   out = table(y_true, max.col(preds, ties.method = "random"))
   acc = sum(diag(out))/sum(out)
@@ -94,14 +95,14 @@ acc = function(y_true, preds) {
 perf = performance_measures(list_objects = list(kknn = res_knn),
                             eval_metric = acc,
                             sort = list(variable = 'Mean', decreasing = TRUE))
-accurancy_validation_table = perf$test_params$kknn %>% select(k,distance,kernel,accurancy=Mean)
-accurancy_train_table = perf$train_params$kknn %>% select(k,distance,kernel,accurancy=Mean)
-head(accurancy_validation_table,10)
+accuracy_validation_table = perf$test_params$kknn %>% select(k,distance,kernel,accuracy=Mean)
+accuracy_train_table = perf$train_params$kknn %>% select(k,distance,kernel,accuracy=Mean)
+head(accuracy_validation_table,10)
 
 ```
 
 
-The table above is the accuracy of the validation data for model with different hyperparameters, so the optimal hyperparameters should be k=10, p_distance = 3, kernel function="epanechnikov".
+The table above is the accuracy rank list of the model with different hyperparameters on the validation dataset after RandomizedSearchCV, so the optimal hyperparameters should be k=10, p_distance (Minkowski) = 3, kernel function="epanechnikov".
 
 
 ## Explore how the performance of model varies when the amount of training dataset change.
@@ -112,25 +113,53 @@ After defining the hyperparameters, this exploration will require a adjusted cro
 adjusted_cross_validation_splitData = function(data,folds){
   num = data%>%nrow()
   num_per_fold = ceiling(num/folds)
-  validation_ds = list()
-  train_ds = list()
+  splited_dataset = list()
   for (fold in 1:folds) {
     fold_start = (fold-1)*num_per_fold+1
     fold_end = min(fold*num_per_fold,num)
-    fold_indicies = seq(fold_start,fold_end)
-    validation_ds[[fold]] = data%>%filter(row_number()%in%fold_indicies)
-    train_ds[[fold]] = data%>%filter(!row_number()%in%fold_indicies)
+    fold_indices = seq(fold_start,fold_end)
+    splited_dataset[[fold]] = list("train"= data %>% 
+                                     filter(!row_number()%in%fold_indices), 
+                                   "validation"= data %>%
+                                     filter(row_number()%in%fold_indices)) 
   }
   
-  return(list(train=train_ds,vali=validation_ds))
+  return(splited_dataset)
 }
 
-train_data_decrease = function(){
-  
-  decrease_indicies <- 10
-  
-  
+train_data_decrease = function(data, remain_num,fold){
+  set.seed(fold)
+  data_num = data%>% nrow()
+  data_indices = sample(1:data_num,remain_num, replace = FALSE)
+  decreased_data = data %>% filter(row_number()%in%data_indices)
+  return(decreased_data)
 }
+
+kknn_accuracy = function(ds1,ds2){
+  print(ds1)
+  print(ds2)
+  check = kknn(diagnosis~.,train = ds1, test = ds2, k=10, distance = 3, kernel ="epanechnikov")
+  confusion_matrix = table(test_data$diagnosis,fitted(check))
+  acc =  sum(diag(confusion_matrix))/sum(confusion_matrix)
+  return(acc)
+}
+
+
+folds = 5
+inc = 4
+all_sample_list = adjusted_cross_validation_splitData (train_validation_data,folds)
+train_total_num = floor(train_validation_data%>%nrow()*(folds-1)/folds)
+simulated_ds = crossing(sample_list_index = seq(1,5), 
+                        train_data_num = seq(1,train_total_num,inc))%>%
+  mutate(train =pmap(.l = list(sample_list_index,train_data_num),
+                     .f = ~ train_data_decrease(all_sample_list[[.x]][["train"]],
+                                                     .y,.x)))%>%
+  mutate(validation = map(.x=sample_list_index,~ all_sample_list[[.x]][["validation"]]))%>%
+  mutate(accuracy = map2_dbl(.x = train,.y = validation,.f = ~kknn_accuracy(.x,.y)))
+head(simulated_ds)
+
+
+
 
 ```
 
