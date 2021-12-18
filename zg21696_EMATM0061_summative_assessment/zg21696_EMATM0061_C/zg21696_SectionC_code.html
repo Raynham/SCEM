@@ -224,15 +224,14 @@ head(breast_cancer_ds)</code></pre>
 ## 4               0.2575         0.6638                 0.17300
 ## 5               0.1625         0.2364                 0.07678
 ## 6               0.1741         0.3985                 0.12440</code></pre>
-<pre class="r"><code>## The column id and X don&#39;t affect the prediction, so delete them from dataset
+<pre class="r"><code>## The column id don&#39;t affect the prediction, so delete them from dataset
 breast_cancer_ds &lt;- breast_cancer_ds %&gt;% select(-c(id)) 
-## The number of features and samples
+## The number of samples and features
 dim(breast_cancer_ds)</code></pre>
 <pre><code>## [1] 569  31</code></pre>
-<pre class="r"><code>## Convert the value of the categorical variable &quot;diagnosis&quot; to a numerical value where M = 1 and B = 0.
-breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == &#39;M&#39;)] &lt;- 1
-breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == &#39;B&#39;)] &lt;- 0
-
+<pre class="r"><code>## Convert the value of the categorical variable &quot;diagnosis&quot; to a numerical value where B = 1 and M = 0.
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == &#39;M&#39;)] &lt;- 0
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == &#39;B&#39;)] &lt;- 1
 ## The magnitude for some features have a significant gap, like &quot;radius_mean&quot; and &quot;area_mean&quot;
 head(select(breast_cancer_ds,symmetry_mean,area_mean),3)</code></pre>
 <pre><code>##   symmetry_mean area_mean
@@ -265,7 +264,7 @@ grid_kknn = list(k = 3:20,
                  distance = 1:5,
                  kernel = c(&quot;rectangular&quot;, &quot;triangular&quot;, &quot;epanechnikov&quot;, &quot;biweight&quot;, &quot;triweight&quot;,&quot;cos&quot;, &quot;inv&quot;, &quot;gaussian&quot;, &quot;rank&quot;, &quot;optimal&quot;))
 
-## make diagnosis results the numerical value
+## make diagnosis results become numerical value (1,2)
 diagnosis_vec = train_validation_data[,1]
 diagnosis_vec = c(1:length(unique(diagnosis_vec)))[match(diagnosis_vec, sort(unique(diagnosis_vec)))]
 data_vec = train_validation_data[,-1]
@@ -275,7 +274,7 @@ form &lt;- as.formula(paste(&#39;diagnosis ~&#39;, paste(names(data_vec),collaps
 ALL_DATA = train_validation_data
 ALL_DATA$diagnosis = as.factor(diagnosis_vec)
 
-## execute the random search cross validation
+## execute the RandomizedSearchCV of which the number of randomly sampling hyperparameter combinations (iteration) is 30 and K-folds for crossing validation is 5.
 res_knn = random_search_resample(
   as.factor(diagnosis_vec),
   tune_iters = 30,
@@ -354,8 +353,8 @@ res_knn = random_search_resample(
   |====================================================================  |  97%
   |                                                                            
   |======================================================================| 100%</code></pre>
-<div id="because-the-problem-we-explore-is-a-binary-classification-and-the-dataset-is-not-so-unbalanced-benign-malignant-357212-so-accurancy-is-chosen-as-the-metric-for-the-performance-of-the-model." class="section level3">
-<h3>Because the problem we explore is a binary classification and the dataset is not so unbalanced (benign : malignant = 357:212), so accurancy is chosen as the metric for the performance of the model.</h3>
+<div id="because-the-problem-we-explore-is-a-binary-classification-and-the-dataset-is-not-so-unbalanced-benign-malignant-357212-so-accuracy-is-chosen-as-the-metric-for-the-performance-of-the-model-rather-than-auc-value." class="section level3">
+<h3>Because the problem we explore is a binary classification and the dataset is not so unbalanced (benign : malignant = 357:212), so accuracy is chosen as the metric for the performance of the model rather than AUC value.</h3>
 <p>Accuracy=<span class="math inline">\(TP+TN\over ALL\)</span> TP means True Positive, the number of predicting correctly the tumor is malignant TN means True Negative, the number of predicting correctly the tumor is benign.</p>
 <pre class="r"><code>##computing accuracy
 acc = function(y_true, preds) { 
@@ -368,48 +367,75 @@ acc = function(y_true, preds) {
 perf = performance_measures(list_objects = list(kknn = res_knn),
                             eval_metric = acc,
                             sort = list(variable = &#39;Mean&#39;, decreasing = TRUE))
-accurancy_validation_table = perf$test_params$kknn %&gt;% select(k,distance,kernel,accurancy=Mean)
-accurancy_train_table = perf$train_params$kknn %&gt;% select(k,distance,kernel,accurancy=Mean)
-head(accurancy_validation_table,10)</code></pre>
-<pre><code>##     k distance       kernel accurancy
+accuracy_validation_table = perf$test_params$kknn %&gt;% select(k,distance,kernel,accuracy=Mean)
+accuracy_train_table = perf$train_params$kknn %&gt;% select(k,distance,kernel,accuracy=Mean)
+head(accuracy_validation_table,10)</code></pre>
+<pre><code>##     k distance       kernel  accuracy
 ## 27 10        3 epanechnikov 0.9788235
 ## 5  13        3 epanechnikov 0.9764706
 ## 1  17        2     biweight 0.9741724
 ## 16  7        2   triangular 0.9741724
 ## 28  7        2          cos 0.9741724
 ## 13  4        2          inv 0.9718194
-## 6   4        3         rank 0.9717647
 ## 17  3        3     gaussian 0.9717647
 ## 25  9        3     gaussian 0.9717647
-## 2   6        1   triangular 0.9694665</code></pre>
-<p>The table above is the accuracy rank list of the model with different hyperparameters on the validation dataset after RandomizedSearchCV, so the optimal hyperparameters should be k=10, p_distance = 3, kernel function=“epanechnikov”.</p>
+## 2   6        1   triangular 0.9694665
+## 11 13        1      optimal 0.9694665</code></pre>
+<p>The table above is the accuracy rank list of the model with different hyperparameters on the validation dataset after RandomizedSearchCV, so the optimal hyperparameters should be k=10, p_distance (Minkowski) = 3, kernel function=“epanechnikov”.</p>
 </div>
 </div>
 <div id="explore-how-the-performance-of-model-varies-when-the-amount-of-training-dataset-change." class="section level2">
 <h2>Explore how the performance of model varies when the amount of training dataset change.</h2>
 <p>After defining the hyperparameters, this exploration will require a adjusted cross-validation method</p>
-<pre class="r"><code>adjusted_cross_validation_splitData = function(data,folds){
+<pre class="r"><code>adjusted_splitData = function(data,folds){
   num = data%&gt;%nrow()
   num_per_fold = ceiling(num/folds)
-  validation_ds = list()
-  train_ds = list()
+  splited_dataset = list()
   for (fold in 1:folds) {
     fold_start = (fold-1)*num_per_fold+1
     fold_end = min(fold*num_per_fold,num)
-    fold_indicies = seq(fold_start,fold_end)
-    validation_ds[[fold]] = data%&gt;%filter(row_number()%in%fold_indicies)
-    train_ds[[fold]] = data%&gt;%filter(!row_number()%in%fold_indicies)
+    fold_indices = seq(fold_start,fold_end)
+    splited_dataset[[fold]] = list(&quot;train&quot;= data %&gt;% 
+                                     filter(!row_number()%in%fold_indices), 
+                                   &quot;validation&quot;= data %&gt;%
+                                     filter(row_number()%in%fold_indices)) 
   }
   
-  return(list(train=train_ds,vali=validation_ds))
+  return(splited_dataset)
 }
 
-train_data_decrease = function(){
-  
-  decrease_indicies &lt;- 10
-  
-  
-}</code></pre>
+train_data_decrease = function(data, remain_num,fold){
+  set.seed(fold)
+  data_num = data%&gt;% nrow()
+  data_indices = sample(1:data_num,remain_num, replace = FALSE)
+  decreased_data = data %&gt;% filter(row_number()%in%data_indices)
+  return(decreased_data)
+}
+
+kknn_accuracy = function(ds1,ds2){
+  ds1$diagnosis = factor(ds1$diagnosis)
+  ds2$diagnosis = factor(ds2$diagnosis)
+  check = kknn(diagnosis~.,train = ds1, test = ds2, k=10, distance = 3, kernel =&quot;epanechnikov&quot;)
+  fit = fitted(check)
+  confusion_matrix = table(ds2$diagnosis, fit)
+  acc =  sum(diag(confusion_matrix))/sum(confusion_matrix)
+  return(acc)
+}
+
+
+folds = 5
+inc = 3
+all_sample_list = adjusted_splitData (train_validation_data,folds)
+train_total_num = floor(train_validation_data%&gt;%nrow()*(folds-1)/folds)
+simulated_ds = crossing(sample_list_index = seq(1,5), 
+                        train_data_num = seq(15,train_total_num,inc))%&gt;%
+  mutate(train = pmap(.l = list(sample_list_index,train_data_num),
+                     .f = ~ train_data_decrease(all_sample_list[[.x]][[&quot;train&quot;]],
+                                                     .y,.x)))%&gt;%
+  mutate(validation = map(.x=sample_list_index, ~all_sample_list[[.x]][[&quot;validation&quot;]]))%&gt;%
+  mutate(acc = map2_dbl(.x = train,.y = validation,. = ~kknn_accuracy(.x,.y)))%&gt;%
+  group_by(train_data_num)%&gt;%
+  summarize(accurancy = mean(acc))</code></pre>
 </div>
 
 

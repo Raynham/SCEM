@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(kknn)
 library(tidyverse)
 library(dplyr)
+library(ggplot2)
+library(magrittr)
 ```
 
 ## Importing Data and pretreatment
@@ -22,9 +24,8 @@ breast_cancer_ds <- breast_cancer_ds %>% select(-c(id))
 ## The number of samples and features
 dim(breast_cancer_ds)
 ## Convert the value of the categorical variable "diagnosis" to a numerical value where B = 1 and M = 0.
-breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'B')] <- 1
 breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'M')] <- 0
-breast_cancer_ds$diagnosis=as.numeric(breast_cancer_ds$diagnosis)
+breast_cancer_ds$diagnosis[which(breast_cancer_ds$diagnosis == 'B')] <- 1
 ## The magnitude for some features have a significant gap, like "radius_mean" and "area_mean"
 head(select(breast_cancer_ds,symmetry_mean,area_mean),3)
 ## The feature-scaling is necessary
@@ -45,14 +46,95 @@ test_data <- breast_cancer_ds %>% filter (row_number()%in%test_inds)
 train_validation_data <- breast_cancer_ds %>% filter(!row_number() %in% test_inds)
 ```
 
-## Hyperparameter Tuning through RandomizedSearchCV
+## Explore how the performance of model varies (both on train data and validation data) when the amount of training dataset changes.
+
+After defining the hyperparameters, this exploration will require a adjusted cross-validation method 
+
+```{r}
+adjusted_splitData = function(data,folds){
+  num = data%>%nrow()
+  num_per_fold = ceiling(num/folds)
+  splited_dataset = list()
+  for (fold in 1:folds) {
+    fold_start = (fold-1)*num_per_fold+1
+    fold_end = min(fold*num_per_fold,num)
+    fold_indices = seq(fold_start,fold_end)
+    splited_dataset[[fold]] = list("train"= data %>% 
+                                     filter(!row_number()%in%fold_indices), 
+                                   "validation"= data %>%
+                                     filter(row_number()%in%fold_indices)) 
+  }
+  return(splited_dataset)
+}
+
+train_data_decrease = function(data, remain_num,fold){
+  set.seed(fold)
+  data_num = data%>% nrow()
+  data_indices = sample(1:data_num,remain_num, replace = FALSE)
+  decreased_data = data %>% filter(row_number()%in%data_indices)
+  return(decreased_data)
+}
+
+
+kknn_accuracy = function(ds1,ds2, k_neighbor=10){
+  ds1$diagnosis = factor(ds1$diagnosis)
+  ds2$diagnosis = factor(ds2$diagnosis)
+  check = kknn(diagnosis~.,train = ds1, test = ds2, k=k_neighbor, distance = 2, kernel ="rectangular")
+  fit = fitted(check)
+  confusion_matrix = table(ds2$diagnosis, fit)
+  acc =  sum(diag(confusion_matrix))/sum(confusion_matrix)
+  return(acc)
+}
+
+
+folds = 5
+inc = 3
+all_sample_list = adjusted_splitData (train_validation_data,folds)
+train_total_num = floor(train_validation_data%>%nrow()*(folds-1)/folds)
+acc_by_train_ds_num = crossing(sample_list_index = seq(1,5), 
+                        train_data_num = seq(15,train_total_num,inc))%>%
+  mutate(train = pmap(.l = list(sample_list_index,train_data_num),
+                     .f = ~ train_data_decrease(all_sample_list[[.x]][["train"]],
+                                                     .y,.x)))%>%
+  mutate(validation = map(.x=sample_list_index,.f=~all_sample_list[[.x]][["validation"]]))%>%
+  mutate(acc_validation = map2_dbl(.x = train,.y = validation, .f = ~kknn_accuracy(ds1 =.x,ds2=.y)))%>%
+  mutate(acc_train = map_dbl(.x = train,.f = ~kknn_accuracy(ds1=.x,ds2=.x)))%>%
+  group_by(train_data_num)%>%
+  summarize(validation_accuracy = mean(acc_validation), train_accuracy = mean(acc_train))
+
+acc_by_train_ds_num <- acc_by_train_ds_num%>%
+  pivot_longer(cols=c(validation_accuracy,train_accuracy),names_to = "Type", values_to = "accuracy")
+ggplot(data=acc_by_train_ds_num,aes(x=train_data_num,y=accuracy,color =Type,linetype= Type))+ geom_smooth() + theme_bw() 
+
+```
+
+## Explore how the performance of model varies (both on train data and validation data) when the hyperparameter, k,changes
+about this part, we still should apply the idea for crossing validation to get the more credible accuracy changing situation as the hyperparameter k changes.
+```{r}
+folds = 5
+all_folds_ds = adjusted_splitData (train_validation_data,folds)
+acc_by_hyperparameter = crossing(k = seq(1,100,5),
+                                 fold_index = 1:folds)%>%
+  mutate(train_per_fold = map(.x=fold_index, .f=~all_folds_ds[[.x]][["train"]]))%>%
+  mutate(validation_per_fold = map(.x=fold_index, .f=~all_folds_ds[[.x]][["validation"]]))%>%
+  mutate(acc_train = map2_dbl(.x = train_per_fold, .y=k, .f=~kknn_accuracy(ds1=.x,ds2=.x,k_neighbor =.y)))%>%
+  mutate(acc_validation = pmap_dbl(.l= list(train_per_fold, validation_per_fold,k),.f=~kknn_accuracy(ds1=..1,ds2=..2,k_neighbor =..3)))%>%
+  group_by(k)%>%
+  summarize(validation_accuracy = mean(acc_validation), train_accuracy = mean(acc_train))
+
+acc_by_hyperparameter <- acc_by_hyperparameter%>%
+  pivot_longer(cols=c(validation_accuracy,train_accuracy),names_to = "Type", values_to = "accuracy")
+ggplot(data=acc_by_hyperparameter,aes(x=k,y=accuracy,color =Type,linetype= Type))+geom_smooth() + theme_bw() 
+
+```
+ ## Hyperparameter Tuning through RandomizedSearchCV
 In this part, an external package named RandomSearchR by MOUSELIMIS is used for implementing RandomizedSearchCV to tune hyperparameter.
 ```{r}
 library(RandomSearchR)
 ## list all choices of hyperparameter
-grid_kknn = list(k = 3:20, 
+grid_kknn = list(k = 1:50, 
                  distance = 1:5,
-                 kernel = c("rectangular", "triangular", "epanechnikov", "biweight", "triweight","cos", "inv", "gaussian", "rank", "optimal"))
+                 kernel = c("rectangular", "triangular", "epanechnikov", "biweight","cos", "inv", "gaussian", "rank", "optimal"))
 
 ## make diagnosis results become numerical value (1,2)
 diagnosis_vec = train_validation_data[,1]
@@ -67,7 +149,7 @@ ALL_DATA$diagnosis = as.factor(diagnosis_vec)
 ## execute the RandomizedSearchCV of which the number of randomly sampling hyperparameter combinations (iteration) is 30 and K-folds for crossing validation is 5.
 res_knn = random_search_resample(
   as.factor(diagnosis_vec),
-  tune_iters = 30,
+  tune_iters = 50,
   resampling_method = list(method = 'cross_validation',
                            repeats=NULL, 
                            sample_rate = NULL,
@@ -95,73 +177,16 @@ acc = function(y_true, preds) {
 perf = performance_measures(list_objects = list(kknn = res_knn),
                             eval_metric = acc,
                             sort = list(variable = 'Mean', decreasing = TRUE))
-accuracy_validation_table = perf$test_params$kknn %>% select(k,distance,kernel,accuracy=Mean)
-accuracy_train_table = perf$train_params$kknn %>% select(k,distance,kernel,accuracy=Mean)
+accuracy_validation_table = dplyr:: select(perf$test_params$kknn,k,distance,kernel,accuracy=Mean) 
+accuracy_train_table = dplyr:: select(perf$train_params$kknn, k,distance,kernel,accuracy=Mean)
 head(accuracy_validation_table,10)
 
 ```
 
 
-The table above is the accuracy rank list of the model with different hyperparameters on the validation dataset after RandomizedSearchCV, so the optimal hyperparameters should be k=10, p_distance (Minkowski) = 3, kernel function="epanechnikov".
+The table above is the accuracy rank list of the model with different hyperparameters on the validation dataset after RandomizedSearchCV, so the optimal hyperparameters should be k=11, p_distance (Minkowski) = 3, kernel function="epanechnikov".
 
 
-## Explore how the performance of model varies when the amount of training dataset change.
-
-After defining the hyperparameters, this exploration will require a adjusted cross-validation method 
-
-```{r}
-adjusted_cross_validation_splitData = function(data,folds){
-  num = data%>%nrow()
-  num_per_fold = ceiling(num/folds)
-  splited_dataset = list()
-  for (fold in 1:folds) {
-    fold_start = (fold-1)*num_per_fold+1
-    fold_end = min(fold*num_per_fold,num)
-    fold_indices = seq(fold_start,fold_end)
-    splited_dataset[[fold]] = list("train"= data %>% 
-                                     filter(!row_number()%in%fold_indices), 
-                                   "validation"= data %>%
-                                     filter(row_number()%in%fold_indices)) 
-  }
-  
-  return(splited_dataset)
-}
-
-train_data_decrease = function(data, remain_num,fold){
-  set.seed(fold)
-  data_num = data%>% nrow()
-  data_indices = sample(1:data_num,remain_num, replace = FALSE)
-  decreased_data = data %>% filter(row_number()%in%data_indices)
-  return(decreased_data)
-}
-
-kknn_accuracy = function(ds1,ds2){
-  print(ds1)
-  print(ds2)
-  check = kknn(diagnosis~.,train = ds1, test = ds2, k=10, distance = 3, kernel ="epanechnikov")
-  confusion_matrix = table(test_data$diagnosis,fitted(check))
-  acc =  sum(diag(confusion_matrix))/sum(confusion_matrix)
-  return(acc)
-}
-
-
-folds = 5
-inc = 4
-all_sample_list = adjusted_cross_validation_splitData (train_validation_data,folds)
-train_total_num = floor(train_validation_data%>%nrow()*(folds-1)/folds)
-simulated_ds = crossing(sample_list_index = seq(1,5), 
-                        train_data_num = seq(1,train_total_num,inc))%>%
-  mutate(train =pmap(.l = list(sample_list_index,train_data_num),
-                     .f = ~ train_data_decrease(all_sample_list[[.x]][["train"]],
-                                                     .y,.x)))%>%
-  mutate(validation = map(.x=sample_list_index,~ all_sample_list[[.x]][["validation"]]))%>%
-  mutate(accuracy = map2_dbl(.x = train,.y = validation,.f = ~kknn_accuracy(.x,.y)))
-head(simulated_ds)
-
-
-
-
-```
 
 
 
