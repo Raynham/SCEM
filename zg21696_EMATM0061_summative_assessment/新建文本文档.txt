@@ -1,3 +1,0 @@
-%>%
-  mutate(validation =all_sample_list[[sample_list_subscript]]["validation"])%>%
-  mutate(accuracy = map2_dbl(.x = train,.y = validation,.f = ~kknn_accuracy(.x,.y)))

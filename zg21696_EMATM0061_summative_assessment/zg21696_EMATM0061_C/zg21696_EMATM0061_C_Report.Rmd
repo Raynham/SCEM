@@ -1,5 +1,5 @@
 ---
-title: "zg21696_SectionC"
+title: "zg21696_EMATM0061_C_Report"
 author: "Ruinan Wang"
 date: "13/12/2021"
 output: html_document
@@ -22,8 +22,7 @@ K-Nearest Neighbour is abbreviated as KNN, which can be used to solve both regre
 KNN is suitable to deal with the dataset with a small distance between classes, but it is vulnerable for unbalanced datasets and meanwhile, time complexity will become very large if the amount of training dataset is enormous. The following will describe in more detail and give some optimization.  
 
 ## 3.2 Importing Data set and pretreatment  
-The dataset is obtained from UCL Machine Learning repository about breast cancer patients in Wisconsin with malignant and benign tumours (Wolberg, Street, Mangasarian, 1995). The creators are W.H.Wolberg, W.N.Street and O.L.Mangasarian.[1]  
-
+The dataset is obtained from UCL Machine Learning repository about breast cancer patients in Wisconsin with malignant and benign tumours (Wolberg, Street, Mangasarian, 1995).
 ```{r}
 breast_cancer_ds = read.csv("data.csv", header = TRUE)
 ```
@@ -190,20 +189,18 @@ ggplot(data=acc_by_hyperparameter,aes(x=k,y=accuracy,color =Type,linetype= Type)
 
 ```
 
-## 3.5 Hyperparameter Tuning through RandomizedSearchCV
+## 3.5 Hyperparameter tuning through RandomizedSearchCV and report the performance based on the test data
 In KNN, k-neighbours is not only the hyperparameter, but the way to compute the distance and the function to add weights.  
     
     
-Generally speaking, Euclidean distance $\sqrt{\sum_{r=1}^n{(x_i-y_i)^2}}$is selected as the distance metric by default. But there are many other distance measures, like cosine distance, Mahalanobis distance. Each specific dataset has a different optimal distance measurement for classification or regression. The following will only explore the generalization of Euclidean distance, Minkowski distance $\left(\sum_{i=1}^n|x_i-y_i|^p\right)^{1/p}$ as distance metric where p is a hyperparameter.  
+Generally speaking, Euclidean distance $\sqrt{\sum_{r=1}^n{(x_i-y_i)^2}}$ is selected as the distance metric by default. But there are many other distance measures, like cosine distance, Mahalanobis distance. Each specific dataset has a different optimal distance measurement for classification or regression. The following will only explore the generalization of Euclidean distance, Minkowski distance $\left(\sum_{i=1}^n|x_i-y_i|^p\right)^{1/p}$ as distance metric where p is a hyperparameter.  
   
   
-Real-world datasets have different data volumes for different classes, leading to a situation where the result just belongs to the class with more data volume. This problem especially influences the model performance for datasets with a small distance between classes.That is why weighting the first k neighbours is important. KKNN package provides many kernel functions to add weights,like Gaussian kernel $W(x)=ae^{-{(x-b)^2\over 2c^2}}\space(a,b,c\in R)$,  
+Real-world datasets may has extremely different data volumes for different classes, leading to a situation where the result just belongs to the class with more data volume. This problem especially influences the model performance for datasets with a small distance between classes.That is why weighting the first k neighbours is important. KKNN function provides many kernel functions to add weights,like Gaussian kernel, biweight kernel and epanechnikov kernel, which also can be taken as a hyperparameter.  
 
+So, if the hyperparameter tuning is executed in this situation, the optimal combination of these three hyperparameters needs to be found. But GridsearchCV can not be chosen, because it would need list all combination to validate, which is extremely time-consuming. Compared with GridsearchCV, RandomizedSearchCV does not need to try all possible combinations but sample the random hyperparameter values based on the hyperparameter statistic distribution and then combine them to do the crossing validation.
 
-
-
-remotes::install_github('mlampros/RandomSearchR')
-In this part, an external package named RandomSearchR by MOUSELIMIS is used for implementing RandomizedSearchCV to tune hyperparameter.
+An external package named RandomSearchR by Lampros will be used (Lampros, 2016). Depending on package "remote", it can be downloaded through command remotes::install_github('mlampros/RandomSearchR')
 ```{r, results='hide', warning=FALSE}
 library(RandomSearchR)
 ## list all choices of hyperparameter
@@ -233,7 +230,6 @@ res_knn = random_search_resample( as.factor(diagnosis_vec),
                                   regression = FALSE,
                                   re_run_params=FALSE)
 ```
-### 
 ```{r}
 ##computing accuracy
 acc = function(y_true, preds) { 
@@ -242,7 +238,7 @@ acc = function(y_true, preds) {
   acc
 }
 
-##Obtaining the evaluation result for performance of this KNN classifier
+##Obtaining the performance evaluation result of this KNN classifier
 perf = performance_measures(list_objects = list(kknn = res_knn),
                             eval_metric = acc,
                             sort = list(variable = 'Mean', decreasing = TRUE))
@@ -253,11 +249,9 @@ head(accuracy_validation_table,10)
 ```
 
 
-The table above is the accuracy rank list of the model with different hyperparameters on the validation dataset after RandomizedSearchCV, so the optimal hyperparameters should be k=11, p_distance (Minkowski) = 3, kernel function="epanechnikov".
+Through RandomizedSearchCV, a accuracy rank list can be obtained. So, the optimal hyperparameters should be k=11, p_distance (Minkowski) = 3, kernel function="epanechnikov".
 
-
-##report 
-
+For reporting the classifier performance in more detail, the package named "caret" will be utilized of which the function "confusionMatrix()" can provides many metric results. Notably, Sensitivity is 0.9767 and Specificity is 0.8246, which means the ability of this classifier to predict the tumour is malignant (0) is far better than the ability to predict that the tumour is benign (1).
 ```{r}
 library(caret)
 test_knn = kknn(diagnosis~., train = train_validation_data, test = test_data, k = 11, distance = 3, kernel = "epanechnikov")
@@ -266,11 +260,21 @@ pred = fitted(test_knn)
 confusionMatrix(table(pred, truth))
 ```
 
-## the introduction of kd tree
+## 3.6 The introduction of kd tree and the efficiency and performance comparision
+KNN is the representative for "Lazy Learning".  It means that some algorithms do not need computing model parameters in data training, and even doesn't need data training. However, to some degree, these algorithms just delay the time on data training to the data test. KNN needs to utilize all training data in the test stage. Based on the time complexity in the test stage, O(N*D), where N is the number of a sample set, and D is the number of dimensions, a conclusion can be made that if N or D becomes enormous, the time complexity and computational volume becomes large. It also means KNN are not good at to deal with a very high dimensions dataset.
+
+KD tree is a kind of tree data structure that stores instance points in multidimensional space for rapid retrieval. If the dataset for training is stored in the KD tree in advance, part of the time complexity of KNN can be transferred to the space complexity, and the efficiency can be improved in the data test stage.  
+  
+The following will apply for "RANN" package written by Jefferis, a wrapper for Approximate Nearest Neighbours (ANN) C++ library, where nn2 function uses the KD tree to store training datasets to search the p number of near neighbours for each point in a test dataset (Jefferis, 2019).
+
+Because the amount of breast cancer data is too small, in order to enlarge the time consumption comparison between KNN search with KD tree and traditional KNN search, these two methods are repeated to execute a thousand times to repeat 1000 times.
 ```{r}
 library(RANN)
 knn_on_kdtree = system.time(lapply(1:1000,function(x) test1 <- nn2(train_validation_data[-1], k=11, query = test_data[-1])))[3]
 normal_knn = system.time(lapply(1:1000,function(x) test2 <-  kknn(diagnosis~., train_validation_data, test_data, k = 11)))[3]
+```
+From the figures, it can be seen that the time elapsed on KNN search on a KD tree is less than traditional KNN search 
+```{r}
 time_table = data.frame(Type = c("KNN search on a KD Tree","Traditional KNN"), Time = c(as.numeric(knn_on_kdtree),as.numeric(normal_knn)))
 time_table
 ggplot(data = time_table, aes(x=Type,y=Time,fill=Type))+ 
@@ -305,19 +309,31 @@ traditional_knn = function(train,test){
   pred_vector = fitted(check_knn)
   return(pred_vector)
 }
-
+```
+In terms of performance comparison, the gap between these methods is not very obvious.
+```{r}
 preds_kdtree = kdtree_knn(train_validation_data,test_data)
 preds_tradition = traditional_knn(train_validation_data,test_data)
 truth = test_data$diagnosis
 kd_preds_table = table(truth,preds_kdtree)
-kd_preds_table
+confusionMatrix(kd_preds_table)
 trad_preds_table = table(truth,preds_tradition)
-trad_preds_table
-
-accuracy = c("the accuracy of the KNN on a KD tree"= sum(diag(kd_preds_table))/sum(kd_preds_table), 
-               "the accuracy of the traditional KNN" = sum(diag(trad_preds_table))/sum(trad_preds_table))
-accuracy
-
+confusionMatrix(trad_preds_table)
 ```
+
+## 3.7 Further Consideration
+All packages about KD tree search just apply for the basic KNN to return the near neighbours. They just only take K as a hyperparameter but ignore the distance measures and the method about weighting, unlike the KKNN package. But this phenomenon very obviously means that k as the hyperparameter in KNN is much more important than the distance measures and the method about weighting. But in other algorithms where it is difficult to intuitively understand the importance of all different hyperparameters, how to evaluate their importance from a mathematical and theoretical perspective may be a direction that deserves to study.
+
+## 3.8 References
+[1] W.H.Wolberg, W.N.Street,O.L.Mangasarian (1995). Breast Cancer Wisconsin (Diagnostic) Data Set [online]. Acessed: 18 December 2021. Available: https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29  
+  
+[2] Mouselimis Lampros (2016).Random search and resampling techniques in R [online]. Acessed: 19 December 2021. Available: http://mlampros.github.io/2016/03/14/random_search_R/  
+  
+[3] Gregory Jefferis (2019). RAAN [online]. Acessed: 20 December 2021. Available: https://www.rdocumentation.org/packages/RANN/versions/2.6.1  
+
+
+
+
+
 
 
