@@ -8,7 +8,6 @@ K-Nearest Neighbour Algorithms is easy to understand for machine learning freshe
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
-library(dplyr)
 ```
 ## 3.1 Introduction for K-Nearest Neighbour algorithms
 K-Nearest Neighbour is abbreviated as KNN, which can be used to solve both regression and classification problems. The core concept of KNN can be summarised as that if things are similar, they are closed to each other. Briefly speaking, in KNN, the class or the predicting value of test samples is determined by the “votes” of the K nearest neighbours. The following is the specific steps of using basic KNN.  
@@ -161,7 +160,6 @@ acc_by_train_ds_num <- acc_by_train_ds_num%>%
 ```
 It can be seen from the figure that both the accuracy on the training dataset and the validation dataset surge before the training data increases to about 100, however, the growth rate of both slows down later.
 ```{r}
-library(ggplot2)
 ggplot(data=acc_by_train_ds_num,aes(x=train_data_num,y=accuracy,color =Type,linetype= Type))+ geom_smooth() + theme_bw() 
 ```
 
@@ -280,7 +278,8 @@ time_table
 ggplot(data = time_table, aes(x=Type,y=Time,fill=Type))+ 
   geom_bar(stat="identity",width=0.5)+
   labs(title = "The comparision about Time Elapsed", y="Time in Seconds") + 
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5))+ 
+  theme_bw() 
 ```
 
 
