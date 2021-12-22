@@ -9,3 +9,43 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### B.1
+#### For each minute, we let p0 denote the conditional probability that the sensor makes a sound if there is no person within one metre of the gate, during that minute. Moreover, for each minute, we let p1 denote the conditional probability that the sensor makes a sound at least once, if there is at least one person present, during that minute. Suppose also that the probability that at least one person walks within one metre of the gate over any given minute is q. Again, for simplicity, we assume that p0,p1,q ∈ [0,1] are all constant. Let φ denote the conditional probability that at least one person has passed within one metre of the gate during the current minute, given that the alarm has made a sound during that minute.
+
+#### (a) Write a function called c_prob_person_given_alarm which gives φ as a function of p0,p1 and q.
+
+First, The conditional probability problem should be decomposed into two events:  
+Event A: At least one person walks within one metre of the gate over any given minute. The probability is $P(A) = q$.  
+Otherwise, we assume Event $A^C$ is that there is no person within one metre of the gate over any given minute. Because $A$ and $A^C$ are complementary events. So, $P(A^C) = 1-q$.  
+Event B: The sensor makes a sound over any given minute. Because of the law of total probability, $P(B) = P(B|A)*P(A)+P(B|A^C)*P(A^C)$  
+ 
+According to the question stem and conditional probability formula, we have known:  
+$p_0 = P(B|A^C) = {P(B\cap A^C)\over P(A^C)}$    
+$p_1 = P(B|A) = {P(B\cap A)\over P(A)}$  
+$\phi = P(A|B) = {P(A\cap B)\over P(B)}$  
+Based on Bayes's Theorem, we can conclude:
+$\phi = P(A|B) = {P(B|A)*P(A)\over P(B)} = {P(B|A)*P(A)\over P(B|A)*P(A)+P(B|A^C)*P(A^C)} = {p_1*q\over p_1*q+p_0*(1-q)}$
+
+Therefore,the function should be written like this:
+```{r}
+c_prob_person_given_alarm <- function (p0,p1,q){
+  prob_person_given_alarm <- (p1*q)/(p1*q+p0*(1-q))
+  return(prob_person_given_alarm)
+}
+```
+
+#### (b) Consider a setting in which p0 = 0.05, p1 = 0.95 and q = 0.1. In this case, what is φ?
+
+```{r}
+c_prob_person_given_alarm(p0=0.05,p1=0.95,q=0.1)
+```
+#### (c) Next consider a setting in which p0 = 0.05, p1 = 0.95 and generate a plot which shows how φ changes as q varies.
+
+```{r}
+p0=0.05
+p1=0.95
+inc = 0.01
+prob_by_q <- data.frame(q=seq(0,1,inc))%>%
+                    mutate(prob = map_dbl(.x=q,~c_prob_person_given_alarm(p0,p1,.x)))
+prob_by_q%>% ggplot(aes(x=q,y=prob))+geom_line()+theme_bw() + xlab("q") + ylab("prob_person_given_alarm")
+```

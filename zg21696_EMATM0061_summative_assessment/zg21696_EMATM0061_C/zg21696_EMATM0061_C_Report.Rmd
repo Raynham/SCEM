@@ -21,7 +21,7 @@ K-Nearest Neighbour is abbreviated as KNN, which can be used to solve both regre
 KNN is suitable to deal with the dataset with a small distance between classes, but it is vulnerable for unbalanced datasets and meanwhile, time complexity will become very large if the amount of training dataset is enormous. The following will describe in more detail and give some optimization.  
 
 ## 3.2 Importing Data set and pretreatment  
-The dataset is obtained from UCL Machine Learning repository about breast cancer patients in Wisconsin with malignant and benign tumours (Wolberg, Street, Mangasarian, 1995).
+The dataset is from UCL Machine Learning repository about breast cancer patients in Wisconsin with malignant and benign tumours (Wolberg, Street, Mangasarian, 1995).
 ```{r}
 breast_cancer_ds = read.csv("data.csv", header = TRUE)
 ```
