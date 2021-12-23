@@ -7,10 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 ```
 
 ### B.1
-#### For each minute, we let p0 denote the conditional probability that the sensor makes a sound if there is no person within one metre of the gate, during that minute. Moreover, for each minute, we let p1 denote the conditional probability that the sensor makes a sound at least once, if there is at least one person present, during that minute. Suppose also that the probability that at least one person walks within one metre of the gate over any given minute is q. Again, for simplicity, we assume that p0,p1,q ∈ [0,1] are all constant. Let φ denote the conditional probability that at least one person has passed within one metre of the gate during the current minute, given that the alarm has made a sound during that minute.
+#### For each minute, we let $p_0$ denote the conditional probability that the sensor makes a sound if there is no person within one metre of the gate, during that minute. Moreover, for each minute, we let p1 denote the conditional probability that the sensor makes a sound at least once, if there is at least one person present, during that minute. Suppose also that the probability that at least one person walks within one metre of the gate over any given minute is q. Again, for simplicity, we assume that p0,p1,q ∈ [0,1] are all constant. Let φ denote the conditional probability that at least one person has passed within one metre of the gate during the current minute, given that the alarm has made a sound during that minute.
 
 #### (a) Write a function called c_prob_person_given_alarm which gives φ as a function of p0,p1 and q.
 
@@ -48,4 +49,156 @@ inc = 0.01
 prob_by_q <- data.frame(q=seq(0,1,inc))%>%
                     mutate(prob = map_dbl(.x=q,~c_prob_person_given_alarm(p0,p1,.x)))
 prob_by_q%>% ggplot(aes(x=q,y=prob))+geom_line()+theme_bw() + xlab("q") + ylab("prob_person_given_alarm")
+```
+
+
+### B.2  
+#### Suppose that $\alpha ,\beta ,\gamma \in [0, 1]$ with $\alpha +\beta +\gamma ≤ 1$ and let X be a discrete random variable with with distribution supported on $\{0, 1, 2, 5\}$. Suppose that $P (X = 1) = \alpha$, $P(X = 2) = \beta$, $P(X = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$.  
+
+
+#### (a) What is the probability mass function $p_X:R\to [0,1]$ for X?
+(Answer)
+$$p(x)=
+\begin{cases}
+1-\alpha-\beta-\gamma &if\ x=0\\
+\alpha &if\ x=1\\
+\beta &if\ x=2\\
+\gamma &if\ x=5\\
+0 &otherwise
+\end{cases}
+$$  
+
+#### (b) Give an expression for the expectation of X in terms of $\alpha, \beta,\gamma$.  
+(Answer)
+$$E[X] = \alpha+2\beta+5\gamma$$
+
+#### (c) Give an expression for the population variance of X in terms of $\alpha, \beta,\gamma$.  
+(Answer)
+$$
+\begin{equation}\begin{split}
+Var(X)&= E[X^2]-E[X]^2\\ 
+&=(\alpha+4\beta+25\gamma)-(\alpha+2\beta+5\gamma)^2\\
+&=\alpha+4\beta+25\gamma-\alpha^2-4\beta^2-25\gamma^2-4\alpha\beta-10\alpha\gamma-20\beta\gamma
+\end{split}\end{equation}
+$$  
+
+  
+
+#### Suppose $X_1,...,X_n$ is a sample consisting of independent and identically distributed random variables with$P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$ for $i=1,...,n$. Let $\overline X:={1\over n}\sum_{i=1}^nX_i$ be the sample mean.
+
+#### (d) Give an expression for the expectation of the random variable $\overline X$ in terms of $\alpha, \beta,\gamma$.
+(Answer)  
+$\because X_1,...,X_n$ are independent and identically distributed  
+$\therefore E[X_1]=...= E[X_n] = \alpha+2\beta+5\gamma$  
+$\because\overline X:={1\over n}\sum_{i=1}^nX_i$  
+$$
+\begin{equation}\begin{split}
+\therefore
+E[\overline X]&=E\left[\frac 1 n\sum_{i=1}^nX_i\right]\\
+&={1\over n}E\left[\sum_{i=1}^nX_i\right]\\
+&={1\over n}nE[X_n]\\
+&=E[X_n]\\
+&=\alpha+2\beta+5\gamma
+\end{split}\end{equation}
+$$
+
+#### (e) Give an expression for the population variance of the random variable $\overline X$ in terms of $\alpha, \beta,\gamma$.
+(Answer)  
+$\because X_1,...,X_n$ are independent and identically distributed  
+$\therefore Var(X_1)=...= Var(X_n) =\alpha+4\beta+25\gamma-\alpha^2-4\beta^2-25\gamma^2-4\alpha\beta-10\alpha\gamma-20\beta\gamma$  
+$\because\overline X:={1\over n}\sum_{i=1}^nX_i$  
+$$
+\begin{equation}\begin{split}
+\therefore
+Var(\overline X)&=Var\left(\frac 1 n\sum_{i=1}^nX_i\right)\\
+&={1\over n^2}Var\left(\sum_{i=1}^nX_i\right)\\
+&={1\over n^2}nVar(X_n)\\
+&=\frac {Var(X_n)} n\\
+&=\frac {\alpha+4\beta+25\gamma-\alpha^2-4\beta^2-25\gamma^2-4\alpha\beta-10\alpha\gamma-20\beta\gamma} n
+\end{split}\end{equation}
+$$
+
+#### (f) create a function called sample_X_0125() which takes as inputs $\alpha, \beta,\gamma$ and n and outputs a sample $X_1,...,X_n$ of independent copies of X where $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$
+
+```{r}
+sample_X_0125 <- function (alpha,beta,gamma,n,seed=0){
+  set.seed(seed)
+  sample_X <- data.frame(U=runif(n))%>%
+    mutate(X=case_when(
+      (0<=U)&(U<alpha)~1,
+      (alpha<=U)&(U<alpha+beta)~2,
+      (alpha+beta<=U)&(U<alpha+beta+gamma)~5,
+      (alpha+beta+gamma<=U)&(U<=1)~0))%>%
+    pull(X)
+  return(sample_X)
+}
+```
+
+
+#### (g) Suppose that α = 0.1, β = 0.2, γ = 0.3. Use your function to generate a sample of size n = 100000 consisting of independent copies of X where $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$. What value do you observe for X? What value do you observe for the sample variance? Is this the type of result you expect? Explain your answer.
+
+```{r}
+alpha <- 0.1
+beta <- 0.2
+gamma <- 0.3
+n <- 100000
+simulation_study_1 <- sample_X_0125(alpha,beta,gamma,n)
+sample_mean <- mean(simulation_study_1)
+sample_mean
+sample_variance <- var(simulation_study_1)
+sample_variance
+```
+Based on the question (b) and (c), we also can conclude the expectation of random variable X and the population variance.
+```{r}
+expectation_random_variable <- alpha+2*beta+5*gamma
+expectation_random_variable
+population_variance <- alpha+4*beta+25*gamma-alpha^2-4*beta^2-25*gamma^2-4*alpha*beta-10*alpha*gamma-20*beta*gamma
+population_variance
+```
+The results are what I expect. Because based on Law of large numbers, when the trial number is enormous or tends to infinity, the average value of the sample will be extremely close to the expected value of the random variable. Meanwhile, the sample variance will also be close to the population variance of the random variable.
+
+
+#### (h) Once again, take α = 0.1, β = 0.2, γ = 0.3. Conduct a simulation study to explore the behavior of the sample mean. Your study should involve 10000 trials. In each trial, you should set n = 100 and create a sample $X_1,...,X_n$ of independent and identically distributed random variables with $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$ for i = 1,...,n. For each of the 10000 trials, compute the corresponding sample mean X based on X1,...,Xn
+
+```{r}
+n <- 100
+trial_num <- 10000
+simulation_study_2 <- data.frame(trial_index = seq(1,trial_num,1))%>%
+  mutate(sample = map(.x=trial_index, .f=~sample_X_0125(alpha,beta,gamma,n,.x)))%>%
+  mutate(sample_mean = map_dbl(.x= sample,.f=~mean(.x)))
+```
+
+#### (i) enerate a histogram plot which displays the behavior of the sample mean within your simulation study. Use a bin width of 0.02. The height of each bar should correspond to the number of times the sample mean took on a value within the corresponding bin.
+
+```{r}
+plot_sample_mean_by_count<-simulation_study_2 %>% 
+  ggplot(aes(x=sample_mean)) + 
+  geom_histogram(binwidth=0.02)+
+  labs(title = "n = 10000",x="Sample Average", y="count")+
+  theme_bw() 
+
+```
+
+#### (j) What is the numerical value of the expectation $E[\overline X]$ in your simulation study? What is the numerical value of the variance $Var(\overline X)$? Give your answers to 4 decimal places.
+```{r}
+expectation_sample_mean <- mean(simulation_study_2$sample_mean)%>%round(4)
+expectation_sample_mean
+variance_sample_mean <- var(simulation_study_2$sample_mean)%>%round(4)
+variance_sample_mean
+```
+
+
+
+#### Let $f_{\mu,\sigma}:R\to [0,+\infty)$ be the probability density function of a Gaussian random variable with distribution $N(\mu,\sigma^2)$, so that the population mean is $\mu$ and the population variance is $\sigma^2$.
+
+#### (k) Now append to your histogram plot an additional curve of the form $x\to 200·f_{\mu,\sigma}(x)$, which displays a rescaled version of the probability density function of a Gaussian random variable with population mean $\mu=E(\overline X)$ and population variance $\sigma^2=Var(\overline X)$. You may wish to consider $10000·f_{\mu,\sigma}(x)$ displayed for a sequence of x-values between $\mu −4·\sigma$ and $\mu +4·\sigma$ in increments of 0.0001. Make sure that the plot is well-presented and both the histogram and the rescaled density are clearly visible.
+
+```{r}
+##let's define what mu value and sigma value are.
+
+mu <- expectation_random_variable
+sigma_sqr <- population_variance
+
+
+
 ```

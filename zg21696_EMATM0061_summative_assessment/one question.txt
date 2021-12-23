@@ -1,0 +1,7 @@
+Based on the answers to question (d) and (e), the numerical value $E[\overline X]$ and$Var(\overline X)$ of the simulation study can be concluded.
+```{r}
+expectation_sample_mean2 <- alpha+2*beta+5*gamma
+expectation_sample_mean2
+variance_sample_mean2 <- (alpha+4*beta+25*gamma-alpha^2-4*beta^2-25*gamma^2-4*alpha*beta-10*alpha*gamma-20*beta*gamma)/n
+variance_sample_mean2
+```
