@@ -278,8 +278,7 @@ time_table
 ggplot(data = time_table, aes(x=Type,y=Time,fill=Type))+ 
   geom_bar(stat="identity",width=0.5)+
   labs(title = "The comparision about Time Elapsed", y="Time in Seconds") + 
-  theme(plot.title = element_text(hjust = 0.5))+ 
-  theme_bw() 
+  theme(plot.title = element_text(hjust = 0.5))+ theme_bw()
 ```
 
 
