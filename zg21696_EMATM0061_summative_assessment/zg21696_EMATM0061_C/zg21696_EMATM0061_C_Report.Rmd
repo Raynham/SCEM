@@ -321,7 +321,7 @@ confusionMatrix(trad_preds_table)
 ```
 
 ## 3.7 Further Consideration
-All packages about KD tree search just apply for the basic KNN to return the near neighbours. They just only take K as a hyperparameter but ignore the distance measures and the method about weighting, unlike the KKNN package. But this phenomenon very obviously means that k as the hyperparameter in KNN is much more important than the distance measures and the method about weighting. But in other algorithms where it is difficult to intuitively understand the importance of all different hyperparameters, how to evaluate their importance from a mathematical and theoretical perspective may be a direction that deserves to study.
+All packages about KD tree search just apply for the basic KNN to return the near neighbours. They just only take K as a hyperparameter but ignore the distance measures and the method about weighting, unlike the KKNN package. But this phenomenon very obviously means that k as the hyperparameter in KNN is much more important than the distance measures and the method about weighting. But in other algorithms where it is difficult to intuitively compare the importance of all different hyperparameters, how to evaluate their importance from a mathematical and theoretical perspective may be a direction that deserves to study.
 
 ## 3.8 References
 [1] W.H.Wolberg, W.N.Street,O.L.Mangasarian (1995). Breast Cancer Wisconsin (Diagnostic) Data Set [online]. Acessed: 18 December 2021. Available: https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29  
