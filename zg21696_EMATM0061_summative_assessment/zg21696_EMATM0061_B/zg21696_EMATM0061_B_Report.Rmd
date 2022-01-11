@@ -208,7 +208,7 @@ plot_sample_mean_by_count+geom_line(data = gaussian_df, aes(x,y=pdf*200))
 ```
 #### (l) Discuss the relationship between the histogram and the additional curve you observe. Can you explain what you observe?
 The sample averages of these independent and identically distributed random variables $\{X_1,...,X_n\}$ coverage to the normal distribution with $\mu=E(\overline X) = 2\space \sigma^2=Var(\overline X)=0.044$.  
-The reason is The Central Limit Theorem. It refers that if sampling n random variables from a population with no matter which distribution (suppose mean is $\mu$ and variable is $\sigma^2$) and n is large enough, the sample mean $\overline X$ of these random variables follows approximately tht normal distribution with mean $\mu$ and variance $\sigma^2\over n$
+The reason is The Central Limit Theorem. It refers that if sampling n random variables from a population with no matter which distribution (suppose mean is $\mu$ and variable is $\sigma^2$) and n is large enough, the sample mean $\overline X$ of these random variables follows approximately the normal distribution with mean $\mu$ and variance $\sigma^2\over n$
 
 
 
