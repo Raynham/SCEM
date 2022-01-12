@@ -13,12 +13,13 @@ library(tidyverse)
 ### B.1
 #### For each minute, we let $p_0$ denote the conditional probability that the sensor makes a sound if there is no person within one metre of the gate, during that minute. Moreover, for each minute, we let p1 denote the conditional probability that the sensor makes a sound at least once, if there is at least one person present, during that minute. Suppose also that the probability that at least one person walks within one metre of the gate over any given minute is q. Again, for simplicity, we assume that p0,p1,q ∈ [0,1] are all constant. Let φ denote the conditional probability that at least one person has passed within one metre of the gate during the current minute, given that the alarm has made a sound during that minute.
 
-#### (a) Write a function called c_prob_person_given_alarm which gives φ as a function of p0,p1 and q.
+#### (Q$_a$) Write a function called c_prob_person_given_alarm which gives φ as a function of p0,p1 and q.
 
-First, The conditional probability problem should be decomposed into two events:  
+#### (A)
+First, this conditional probability problem should be decomposed into two events:  
 Event A: At least one person walks within one metre of the gate over any given minute. The probability is $P(A) = q$.  
 Otherwise, we assume Event $A^C$ is that there is no person within one metre of the gate over any given minute. Because $A$ and $A^C$ are complementary events. So, $P(A^C) = 1-q$.  
-Event B: The sensor makes a sound over any given minute. Because of the law of total probability, $P(B) = P(B|A)*P(A)+P(B|A^C)*P(A^C)$  
+Event B: The sensor makes a sound over any given minute. Based on the law of total probability, $P(B) = P(B|A)*P(A)+P(B|A^C)*P(A^C)$  
  
 According to the question stem and conditional probability formula, we have known:  
 $p_0 = P(B|A^C) = {P(B\cap A^C)\over P(A^C)}$    
@@ -35,13 +36,13 @@ c_prob_person_given_alarm <- function (p0,p1,q){
 }
 ```
 
-#### (b) Consider a setting in which p0 = 0.05, p1 = 0.95 and q = 0.1. In this case, what is φ?
-
+#### (Q$_b$) Consider a setting in which p0 = 0.05, p1 = 0.95 and q = 0.1. In this case, what is φ?
+#### (A)
 ```{r}
 c_prob_person_given_alarm(p0=0.05,p1=0.95,q=0.1)
 ```
-#### (c) Next consider a setting in which p0 = 0.05, p1 = 0.95 and generate a plot which shows how φ changes as q varies.
-
+#### (Q$_c$) Next consider a setting in which p0 = 0.05, p1 = 0.95 and generate a plot which shows how φ changes as q varies.
+#### (A)
 ```{r}
 p0=0.05
 p1=0.95
@@ -56,8 +57,8 @@ prob_by_q%>% ggplot(aes(x=q,y=prob))+geom_line()+theme_bw() + xlab("q") + ylab("
 #### Suppose that $\alpha ,\beta ,\gamma \in [0, 1]$ with $\alpha +\beta +\gamma ≤ 1$ and let X be a discrete random variable with with distribution supported on $\{0, 1, 2, 5\}$. Suppose that $P (X = 1) = \alpha$, $P(X = 2) = \beta$, $P(X = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$.  
 
 
-#### (a) What is the probability mass function $p_X:R\to [0,1]$ for X?
-(Answer)
+#### (Q$_a$) What is the probability mass function $p_X:R\to [0,1]$ for X?
+#### (A)
 $$p(x)=
 \begin{cases}
 1-\alpha-\beta-\gamma &if\ x=0\\
@@ -68,12 +69,12 @@ $$p(x)=
 \end{cases}
 $$  
 
-#### (b) Give an expression for the expectation of X in terms of $\alpha, \beta,\gamma$.  
-(Answer)
+#### (Q$_b$) Give an expression for the expectation of X in terms of $\alpha, \beta,\gamma$.  
+#### (A)
 $$E[X] = \alpha+2\beta+5\gamma$$
 
-#### (c) Give an expression for the population variance of X in terms of $\alpha, \beta,\gamma$.  
-(Answer)
+#### (Q$_c$) Give an expression for the population variance of X in terms of $\alpha, \beta,\gamma$.  
+#### (A)
 $$
 \begin{equation}\begin{split}
 Var(X)&= E[X^2]-E[X]^2\\ 
@@ -84,10 +85,8 @@ $$
 
   
 
-#### Suppose $X_1,...,X_n$ is a sample consisting of independent and identically distributed random variables with$P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$ for $i=1,...,n$. Let $\overline X:={1\over n}\sum_{i=1}^nX_i$ be the sample mean.
-
-#### (d) Give an expression for the expectation of the random variable $\overline X$ in terms of $\alpha, \beta,\gamma$.
-(Answer)  
+#### (Q$_d$) Suppose $X_1,...,X_n$ is a sample consisting of independent and identically distributed random variables with$P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$ for $i=1,...,n$. Let $\overline X:={1\over n}\sum_{i=1}^nX_i$ be the sample mean. Give an expression for the expectation of the random variable $\overline X$ in terms of $\alpha, \beta,\gamma$.
+#### (A)
 $\because X_1,...,X_n$ are independent and identically distributed  
 $\therefore E[X_1]=...= E[X_n] = \alpha+2\beta+5\gamma$  
 $\because\overline X:={1\over n}\sum_{i=1}^nX_i$  
@@ -102,8 +101,8 @@ E[\overline X]&=E\left[\frac 1 n\sum_{i=1}^nX_i\right]\\
 \end{split}\end{equation}
 $$
 
-#### (e) Give an expression for the population variance of the random variable $\overline X$ in terms of $\alpha, \beta,\gamma$.
-(Answer)  
+#### (Q$_e$) Give an expression for the population variance of the random variable $\overline X$ in terms of $\alpha, \beta,\gamma$.
+#### (A)
 $\because X_1,...,X_n$ are independent and identically distributed  
 $\therefore Var(X_1)=...= Var(X_n) =\alpha+4\beta+25\gamma-\alpha^2-4\beta^2-25\gamma^2-4\alpha\beta-10\alpha\gamma-20\beta\gamma$  
 $\because\overline X:={1\over n}\sum_{i=1}^nX_i$  
@@ -118,8 +117,8 @@ Var(\overline X)&=Var\left(\frac 1 n\sum_{i=1}^nX_i\right)\\
 \end{split}\end{equation}
 $$
 
-#### (f) create a function called sample_X_0125() which takes as inputs $\alpha, \beta,\gamma$ and n and outputs a sample $X_1,...,X_n$ of independent copies of X where $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$
-
+#### (Q$_f$) create a function called sample_X_0125() which takes as inputs $\alpha, \beta,\gamma$ and n and outputs a sample $X_1,...,X_n$ of independent copies of X where $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$
+#### (A)
 ```{r}
 sample_X_0125 <- function (alpha,beta,gamma,n){
   sample_X <- data.frame(U=runif(n))%>%
@@ -134,9 +133,10 @@ sample_X_0125 <- function (alpha,beta,gamma,n){
 ```
 
 
-#### (g) Suppose that α = 0.1, β = 0.2, γ = 0.3. Use your function to generate a sample of size n = 100000 consisting of independent copies of X where $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$. What value do you observe for X? What value do you observe for the sample variance? Is this the type of result you expect? Explain your answer.
-
+#### (Q$_g$) Suppose that α = 0.1, β = 0.2, γ = 0.3. Use your function to generate a sample of size n = 100000 consisting of independent copies of X where $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$. What value do you observe for X? What value do you observe for the sample variance? Is this the type of result you expect? Explain your answer.
+#### (A)
 ```{r}
+set.seed(0)
 alpha <- 0.1
 beta <- 0.2
 gamma <- 0.3
@@ -157,8 +157,8 @@ population_variance
 The results are what I expect. Because based on Law of large numbers, when the trial number is enormous or tends to infinity, the average value of the sample will be extremely close to the expected value of the random variable. Meanwhile, the sample variance will also be close to the population variance of the random variable.
 
 
-#### (h) Once again, take α = 0.1, β = 0.2, γ = 0.3. Conduct a simulation study to explore the behavior of the sample mean. Your study should involve 10000 trials. In each trial, you should set n = 100 and create a sample $X_1,...,X_n$ of independent and identically distributed random variables with $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$ for i = 1,...,n. For each of the 10000 trials, compute the corresponding sample mean X based on X1,...,Xn
-
+#### (Q$_h$) Once again, take α = 0.1, β = 0.2, γ = 0.3. Conduct a simulation study to explore the behavior of the sample mean. Your study should involve 10000 trials. In each trial, you should set n = 100 and create a sample $X_1,...,X_n$ of independent and identically distributed random variables with $P (X_i = 1) = \alpha$, $P(X_i = 2) = \beta$, $P(X_i = 5) = \gamma$ and $P(X\notin \{0,1,2,5\}) = 0$ for i = 1,...,n. For each of the 10000 trials, compute the corresponding sample mean X based on X1,...,Xn
+#### (A)
 ```{r}
 set.seed(0)
 n <- 100
@@ -168,19 +168,20 @@ simulation_study_2 <- data.frame(trial_index = seq(1,trial_num,1))%>%
   mutate(sample_mean = map_dbl(.x= sample,.f=~mean(.x)))
 ```
 
-#### (i) enerate a histogram plot which displays the behavior of the sample mean within your simulation study. Use a bin width of 0.02. The height of each bar should correspond to the number of times the sample mean took on a value within the corresponding bin.
-
+#### (Q$_i$) enerate a histogram plot which displays the behavior of the sample mean within your simulation study. Use a bin width of 0.02. The height of each bar should correspond to the number of times the sample mean took on a value within the corresponding bin.
+#### (A)
 ```{r}
 plot_sample_mean_by_count<-simulation_study_2 %>% 
   ggplot(aes(x=sample_mean)) + 
-  geom_histogram(binwidth=0.02)+
+  geom_histogram(binwidth=0.02,fill="#FF9999",colour="black")+
   labs(title = "n = 10000",x="Sample Average", y="count")+
   theme_bw() 
 plot_sample_mean_by_count
 
 ```
 
-#### (j) What is the numerical value of the expectation $E[\overline X]$ in your simulation study? What is the numerical value of the variance $Var(\overline X)$? Give your answers to 4 decimal places.
+#### (Q$_j$) What is the numerical value of the expectation $E[\overline X]$ in your simulation study? What is the numerical value of the variance $Var(\overline X)$? Give your answers to 4 decimal places.
+#### (A)
 ```{r}
 expectation_sample_mean_in_simulation <- mean(simulation_study_2$sample_mean)%>%round(4)
 expectation_sample_mean_in_simulation
@@ -192,8 +193,8 @@ variance_sample_mean_in_simulation
 
 #### Let $f_{\mu,\sigma}:R\to [0,+\infty)$ be the probability density function of a Gaussian random variable with distribution $N(\mu,\sigma^2)$, so that the population mean is $\mu$ and the population variance is $\sigma^2$.
 
-#### (k) Now append to your histogram plot an additional curve of the form $x\to 200·f_{\mu,\sigma}(x)$, which displays a rescaled version of the probability density function of a Gaussian random variable with population mean $\mu=E(\overline X)$ and population variance $\sigma^2=Var(\overline X)$. You may wish to consider $10000·f_{\mu,\sigma}(x)$ displayed for a sequence of x-values between $\mu −4·\sigma$ and $\mu +4·\sigma$ in increments of 0.0001. Make sure that the plot is well-presented and both the histogram and the rescaled density are clearly visible.
-
+#### (Q$_k$) Now append to your histogram plot an additional curve of the form $x\to 200·f_{\mu,\sigma}(x)$, which displays a rescaled version of the probability density function of a Gaussian random variable with population mean $\mu=E(\overline X)$ and population variance $\sigma^2=Var(\overline X)$. You may wish to consider $200·f_{\mu,\sigma}(x)$ displayed for a sequence of x-values between $\mu −4·\sigma$ and $\mu +4·\sigma$ in increments of 0.0001. Make sure that the plot is well-presented and both the histogram and the rescaled density are clearly visible.
+#### (A)
 ```{r}
 ##let's define what mu value and sigma value are.
 
@@ -206,10 +207,13 @@ gaussian_df <- data.frame(x=seq(x_start,x_end,inc))%>%
   mutate(pdf=map_dbl(.x=x,~dnorm(x=.x,mean=mu,sd=sigma)))
 plot_sample_mean_by_count+geom_line(data = gaussian_df, aes(x,y=pdf*200))
 ```
-#### (l) Discuss the relationship between the histogram and the additional curve you observe. Can you explain what you observe?
-The sample averages of these independent and identically distributed random variables $\{X_1,...,X_n\}$ coverage to the normal distribution with $\mu=E(\overline X) = 2\space \sigma^2=Var(\overline X)=0.044$.  
-The reason is The Central Limit Theorem. It refers that if sampling n random variables from a population with no matter which distribution (suppose mean is $\mu$ and variable is $\sigma^2$) and n is large enough, the sample mean $\overline X$ of these random variables follows approximately the normal distribution with mean $\mu$ and variance $\sigma^2\over n$
 
+
+#### (Q$_l$) Discuss the relationship between the histogram and the additional curve you observe. Can you explain what you observe?
+#### (A)
+The sample averages of these independent and identically distributed random variables $\{X_1,...,X_n\}$ follow the normal distribution.  
+The reason is The Central Limit Theorem. It refers that if sampling n random variables from a population with no matter which distribution (suppose mean is $\mu$ and variable is $\sigma^2$) and n is large enough, the sample mean $\overline X$ of these random variables follows approximately the normal distribution with mean $\mu$ and variance $\sigma^2\over n$
+$$\overline X \to N(\mu,{\sigma^2\over n})$$
 
 
 ### B.3
@@ -222,7 +226,8 @@ p_\lambda(x):=
 \end{cases}
 $$
 
-#### (a) Give a formula for the the population mean and variance of an exponential random variable $X$ with parameter $\lambda$.
+#### (Q$_a$) Give a formula for the the population mean and variance of an exponential random variable $X$ with parameter $\lambda$.
+#### (A)
 Because an exponential random variable $X$ is continuous random variable
 
 $$
@@ -248,9 +253,10 @@ E[X^2] &=  \int_{-\infty}^{+\infty}x^2f(x)dx \\
 &={2\over \lambda^2}
 \end{split}\end{equation}
 $$
-So, $$Var(X) = E[X^2]-E[X]^2 = {2\over \lambda^2} - {1\over \lambda^2} = {1\over \lambda}$$
+So, $$Var(X) = E[X^2]-E[X]^2 = {2\over \lambda^2} - {1\over \lambda^2} = {1\over \lambda^2}$$
 
-#### (b) Give a formula for the cumulative distribution function and the quantile function for exponential random variables with parameter $\lambda$
+#### (Q$_b$) Give a formula for the cumulative distribution function and the quantile function for exponential random variables with parameter $\lambda$
+#### (A)
 The cumulative distribution function:  
 When $x>0$,
 $$
@@ -279,7 +285,8 @@ F_\lambda^{-1}(p) &:= inf\{x\in R: F_\lambda(x)\le p\}\\
 $$
 
 
-#### (c) Suppose that $X_1,··· ,X_n$ is an i.i.d sample from the exponential distribution with an unknown parameter $\lambda_0>0$. What is the maximum likelihood estimate $\hat\lambda_{MLE}$ for $\lambda_0$?
+#### (Q$_c$) Suppose that $X_1,··· ,X_n$ is an i.i.d sample from the exponential distribution with an unknown parameter $\lambda_0>0$. What is the maximum likelihood estimate $\hat\lambda_{MLE}$ for $\lambda_0$?
+#### (A)
 First, the likelihood function of the exponential distribution is:  
 
 $$
@@ -303,9 +310,8 @@ $$
 $$
 Therefore, the maximum likelihood estimate for $\lambda_0$ is $\lambda_{MLE}={1\over \overline X}$
 
- (d) Conduct a simulation study to explore the behaviour of the maximum likelihood estimator $\hat \lambda_{MLE}$ for $\lambda_0$ on simulated data $X_1,··· ,X_n$ generated using the exponential distribution. Consider a setting in which $\lambda_0=0.01$ and generate a plot of the mean squared error as a function of the sample size. You should consider a sample sizes between 5 and 1000 in increments of 5, and consider 100 trials per sample size. For each trial of each sample size generate a random sample X1,··· ,Xn of the exponential distribution with parameter$\lambda_0=0.01$, then compute the maximum likelihood estimate $\hat \lambda_{MLE}$ for $\lambda_0$ based upon the corresponding sample. Display a plot of the mean square error of $\hat \lambda_{MLE}$ as an estimator for $\lambda_0$ as a function of the sample size.
-
-
+#### (Q$_d$) Conduct a simulation study to explore the behaviour of the maximum likelihood estimator $\hat \lambda_{MLE}$ for $\lambda_0$ on simulated data $X_1,··· ,X_n$ generated using the exponential distribution. Consider a setting in which $\lambda_0=0.01$ and generate a plot of the mean squared error as a function of the sample size. You should consider a sample sizes between 5 and 1000 in increments of 5, and consider 100 trials per sample size. For each trial of each sample size generate a random sample X1,··· ,Xn of the exponential distribution with parameter$\lambda_0=0.01$, then compute the maximum likelihood estimate $\hat \lambda_{MLE}$ for $\lambda_0$ based upon the corresponding sample. Display a plot of the mean square error of $\hat \lambda_{MLE}$ as an estimator for $\lambda_0$ as a function of the sample size.
+#### (A)
 
 ```{r}
 set.seed(5)
@@ -332,8 +338,8 @@ exponential_simulation_df%>%
 ```
 
 
-#### (e) Compute and display the maximum likelihood estimate of the rate parameter $\hat \lambda_{MLE}$
-
+#### (Q$_e$) Compute and display the maximum likelihood estimate of the rate parameter $\hat \lambda_{MLE}$
+#### (A)
 ```{r}
 data <- read.csv("bird_data_EMATM0061.csv", header = TRUE)
 bird_arrival_time_differences <- diff(data$Time)
@@ -342,8 +348,8 @@ lambda_MLE_bird
 ```
 
 
-#### (f) Can you give a confidence interval for $\lambda_0$ with a confidence level of 95%?
-
+#### (Q$_e$) Can you give a confidence interval for $\lambda_0$ with a confidence level of 95%?
+#### (A)
 ```{r}
 confidence_level <- 0.95
 alpha <- 1-confidence_level
@@ -354,4 +360,4 @@ ci_l<-(1/sample_mean)*(1-z_alpha/sqrt(n))
 ci_u<-(1/sample_mean)*(1+z_alpha/sqrt(n))
 c(ci_l,ci_u)
 ```
-The above result is the confidence level of 95% for $\lambda_0$.
+The above result interval [0.004902820, 0.005061953] is the confidence interval for $\lambda_0$ with a confidence level of 95%.

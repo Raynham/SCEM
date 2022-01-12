@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(tidyverse)
 ```
 ## 3.1 Introduction for K-Nearest Neighbour algorithms
-K-Nearest Neighbour is abbreviated as KNN, which can be used to solve both regression and classification problems. The core concept of KNN can be summarised as that if things are similar, they are closed to each other. Briefly speaking, in KNN, the class or the predicting value of test samples is determined by the “votes” of the K nearest neighbours. The following is the specific steps of using basic KNN.  
+K-Nearest Neighbour is abbreviated as KNN, which can be used to solve both regression and classification problems. The core concept of KNN can be summarised as that if things are similar, they are closed to each other. Briefly speaking, in KNN, the class or the predicting value of test samples is determined by the “votes” of the K nearest neighbours (Harrison, 2018). The following is the specific steps of using basic KNN.  
 1. Map the training data to n dimension space. (n is the number of features in a dataset)  
 2. Choose a K as the number of neighbours (if classification, K should be an odd number in most cases)  
 3. Computing the distance between the test data and each training data according to the feature value.  
@@ -18,7 +18,7 @@ K-Nearest Neighbour is abbreviated as KNN, which can be used to solve both regre
 5. Retrieve the first K in this order  
 6. If regression, the mean of the targeted labels of these K neighbours need to be calculated. If classification, the mode of the classes of these K neighbours need to be calculated.  
   
-KNN is suitable to deal with the dataset with a small distance between classes, but it is vulnerable for unbalanced datasets and meanwhile, time complexity will become very large if the amount of training dataset is enormous. The following will describe in more detail and give some optimization.  
+KNN is suitable to deal with the dataset with a small distance between classes, but it is vulnerable for unbalanced datasets and meanwhile, time complexity will become very large if the amount of training dataset is enormous (Harsh, 2016). The following will describe in more detail and give some optimization.  
 
 ## 3.2 Importing Data set and pretreatment  
 The dataset is from UCL Machine Learning repository about breast cancer patients in Wisconsin with malignant and benign tumours (Wolberg, Street, Mangasarian, 1995).
@@ -44,7 +44,7 @@ breast_cancer_ds$diagnosis = factor(breast_cancer_ds$diagnosis)
 ```
   
   
-But, the magnitude for some features have a significant gap, like "radius_mean" and "area_mean". If the scaling to features in the dataset isn't implemented, the result of the classifier will heavily bias towards features with a greater magnitude and ignore the influence of the other features. And distance-based algorithms like KNN are the most vulnerable to unscaled data.  
+But, the magnitude for some features have a significant gap, like "radius_mean" and "area_mean". If the scaling to features isn't implemented, the result of the classifier will heavily bias towards features with a greater magnitude and ignore the influence of the other features. And distance-based algorithms like KNN are the most vulnerable to unscaled data.  
 ```{r}
 head(select(breast_cancer_ds,symmetry_mean,area_mean),3)
 ```
@@ -89,10 +89,10 @@ FN means False Negative, the number of predicting wrongly the tumour is benign.
   
   
   
-After defining the accuracy value as the appropriate metric to evaluate the classifier, the solution will be designed. The solution integrates the Crossing Validation idea to improve the reliability of results. let each fold of train_validation data set become validation dataset once.
+After defining the accuracy value as the appropriate metric, the solution will be designed. **The solution integrates the Crossing Validation idea to improve the reliability of results. let each fold of train_validation data set become validation dataset once.**
   
 
-Firstly, the train_validation dataset will be divided into some folds (I choose 5).  the validation dataset and the training dataset in each iteration will be taken as a list to store in a list variable (nested list). If it has 5 iterations, this variable will have 5 different validation datasets and 5 different training datasets.
+Firstly, the train_validation dataset will be divided into 5 folds. The validation dataset and the training dataset in each iteration will be taken as a list to store in a list variable (nested list). So, there will be 5 different validation datasets and 5 different training datasets.
 ```{r}
 split_data_CV = function(data,folds){
   num = data%>%nrow()
@@ -112,7 +112,7 @@ split_data_CV = function(data,folds){
 ```
 
 
-Create a function to reduce the amount of training dataset in each iteration and return this decreased training dataset. In addition, for improving sampling randomness further, the seed argument will be the iteration index.
+Create a function to reduce the amount of training dataset and return this decreased training dataset. In addition, for improving sampling randomness further, the seed argument will be the iteration index.
 ```{r}
 train_data_decrease = function(initial_train_data, wanted_train_data_num,fold){
   set.seed(fold)
@@ -136,7 +136,7 @@ kknn_accuracy = function(ds1,ds2, k_neighbor=10){
 
 ```
 
-In these 5 iterations, every time the train data amount decreases, the accuracy on the decreased training dataset and the validation dataset will be stored. Then take the average of the accuracy of the same amount of training dataset in iterations.    
+In these 5 iterations, every time the train data amount decreases, the accuracy on the decreased training dataset and the validation dataset will be stored. Then take the average of the accuracy for the same amount of training dataset in iterations.    
 Finally, plot how the average accuracy on the training dataset and validation dataset changes when the amount of the training dataset changes.
 ```{r}
 ##I set that every time the amount of data decreases, I will remove three pieces of data, and the K-fold is 5
@@ -188,15 +188,14 @@ ggplot(data=acc_by_hyperparameter,aes(x=k,y=accuracy,color =Type,linetype= Type)
 ```
 
 ## 3.5 Hyperparameter tuning through RandomizedSearchCV and report the performance based on the test data
-In KNN, k-neighbours is not only the hyperparameter, but the way to compute the distance and the function to add weights.  
+In KNN, the hyperparameter is not only k-neighbours, but the way to compute the distance and the function to add weights.  
     
-    
-Generally speaking, Euclidean distance $\sqrt{\sum_{r=1}^n{(x_i-y_i)^2}}$ is selected as the distance metric by default. But there are many other distance measures, like cosine distance, Mahalanobis distance. Each specific dataset has a different optimal distance measurement for classification or regression. The following will only explore the generalization of Euclidean distance, Minkowski distance $\left(\sum_{i=1}^n|x_i-y_i|^p\right)^{1/p}$ as distance metric where p is a hyperparameter.  
+Generally speaking, Euclidean distance $\sqrt{\sum_{r=1}^n{(x_i-y_i)^2}}$ is selected as the distance metric by default. But there are many other distance measures, like cosine distance, Mahalanobis distance. Each specific dataset has a different optimal distance measurement for classification or regression (Gokte, 2020). The following will only explore the generalization of Euclidean distance, Minkowski distance $\left(\sum_{i=1}^n|x_i-y_i|^p\right)^{1/p}$ as distance metric where p is a hyperparameter  
   
   
-Real-world datasets may has extremely different data volumes for different classes, leading to a situation where the result just belongs to the class with more data volume. This problem especially influences the model performance for datasets with a small distance between classes.That is why weighting the first k neighbours is important. KKNN function provides many kernel functions to add weights,like Gaussian kernel, biweight kernel and epanechnikov kernel, which also can be taken as a hyperparameter.  
+In the real world, there may be a big gap in the amount of data of different classes, leading to a situation where the result just belongs to the class with more data volume. This problem especially influences the model performance for datasets with a small distance between classes (Dubey and Pudi, 2013). That is why weighting the first k neighbours is important. KKNN function provides many kernel functions to add weights, like Gaussian kernel, biweight kernel and epanechnikov kernel, which also can be taken as a hyperparameter.  
 
-So, if the hyperparameter tuning is executed in this situation, the optimal combination of these three hyperparameters needs to be found. But GridsearchCV can not be chosen, because it would need list all combination to validate, which is extremely time-consuming. Compared with GridsearchCV, RandomizedSearchCV does not need to try all possible combinations but sample the random hyperparameter values based on the hyperparameter statistic distribution and then combine them to do the crossing validation.
+So, if the hyperparameter tuning is executed in this situation, the optimal combination of these three hyperparameters would be found. But GridsearchCV can not be chosen, because it would need to list all combinations to validate, which is extremely time-consuming. Compared with GridsearchCV, RandomizedSearchCV does not need to try all possible combinations but sample the random hyperparameter values based on the hyperparameter statistic distribution and then combine them to do the crossing validation (Brownlee, 2020).
 
 An external package named RandomSearchR by Lampros will be used (Lampros, 2016). Depending on package "remote", it can be downloaded through command remotes::install_github('mlampros/RandomSearchR')
 ```{r, results='hide', warning=FALSE}
@@ -249,7 +248,7 @@ head(accuracy_validation_table,10)
 
 Through RandomizedSearchCV, a accuracy rank list can be obtained. So, the optimal hyperparameters should be k=11, p_distance (Minkowski) = 3, kernel function="epanechnikov".
 
-For reporting the classifier performance in more detail, the package named "caret" will be utilized of which the function "confusionMatrix()" can provides many metric results. Notably, Sensitivity is 0.9767 and Specificity is 0.8246, which means the ability of this classifier to predict the tumour is malignant (0) is far better than the ability to predict that the tumour is benign (1).
+For reporting the classifier performance in more detail, the package named “caret” will be utilized, of which the function “confusionMatrix()” can provide many metric results. Notably, Sensitivity is 0.9767 and Specificity is 0.8246, which means the ability of this classifier to predict the tumour is malignant (0) is far better than the ability to predict that the tumour is benign (1).
 ```{r}
 library(caret)
 test_knn = kknn(diagnosis~., train = train_validation_data, test = test_data, k = 11, distance = 3, kernel = "epanechnikov")
@@ -259,13 +258,13 @@ confusionMatrix(table(pred, truth))
 ```
 
 ## 3.6 The introduction of kd tree and the efficiency and performance comparision
-KNN is the representative for "Lazy Learning".  It means that some algorithms do not need computing model parameters in data training, and even doesn't need data training. However, to some degree, these algorithms just delay the time on data training to the data test. KNN needs to utilize all training data in the test stage. Based on the time complexity in the test stage, O(N*D), where N is the number of a sample set, and D is the number of dimensions, a conclusion can be made that if N or D becomes enormous, the time complexity and computational volume becomes large. It also means KNN are not good at to deal with a very high dimensions dataset.
+KNN is the representative for "Lazy Learning".  It means that some algorithms do not need computing model parameters in data training. However, to some degree, these algorithms just delay the time on data training to the data test (Wikipedia, 2021). KNN needs to utilize all training data in the test stage for predict results. Based on the time complexity in the test stage, O(N*D), where N is the number of a sample set, and D is the number of dimensions, a conclusion can be made that if N or D becomes enormous, the time complexity and computational volume becomes large. It also means KNN are not good at to deal with a very high dimensions dataset (Tjoa, 2013).
 
-KD tree is a kind of tree data structure that stores instance points in multidimensional space for rapid retrieval. If the dataset for training is stored in the KD tree in advance, part of the time complexity of KNN can be transferred to the space complexity, and the efficiency can be improved in the data test stage.  
+KD tree is a kind of tree data structure that stores instance points in multidimensional space for rapid retrieval. If the dataset for training is stored in the KD tree in advance, part of the time complexity of KNN can be transferred to the space complexity, and the efficiency can be improved in the data test stage (Schmatz, 2019).  
   
-The following will apply for "RANN" package written by Jefferis, a wrapper for Approximate Nearest Neighbours (ANN) C++ library, where nn2 function uses the KD tree to store training datasets to search the p number of near neighbours for each point in a test dataset (Jefferis, 2019).
+The following will apply for "RANN" package written by Jefferis, a wrapper for Approximate Nearest Neighbours (ANN) C++ library, where nn2 function uses the KD tree to store training datasets to search the k number of near neighbours for each point in a test dataset (Jefferis, 2019).
 
-Because the amount of breast cancer data is too small, in order to enlarge the time consumption comparison between KNN search with KD tree and traditional KNN search, these two methods are repeated to execute a thousand times to repeat 1000 times.
+Because the amount of breast cancer data is too small, in order to view more clearly the time consumption comparison between KNN search with KD tree and traditional KNN search, these two methods are repeated to execute a 1000 times.
 ```{r}
 library(RANN)
 knn_on_kdtree = system.time(lapply(1:1000,function(x) test1 <- nn2(train_validation_data[-1], k=11, query = test_data[-1])))[3]
@@ -320,14 +319,30 @@ confusionMatrix(trad_preds_table)
 ```
 
 ## 3.7 Further Consideration
-All packages about KD tree search just apply for the basic KNN to return the near neighbours. They just only take K as a hyperparameter but ignore the distance measures and the method about weighting, unlike the KKNN package. But this phenomenon very obviously means that k as the hyperparameter in KNN is much more important than the distance measures and the method about weighting. But in other algorithms where it is difficult to intuitively compare the importance of all different hyperparameters, how to evaluate their importance from a mathematical and theoretical perspective may be a direction that deserves to study.
+When preparing this assignment, I viewed documentation of many different R packages about KNN algorithm. I found they are all not perfect. Some lack feature-scaling methods as the parameter, some lack the distance measures as the parameter and some lack the method about weighting. But they all contain K. I think the biggest reason is that k as the hyperparameter in KNN is much more important than other hyperparameters. But in other algorithms, it is not easy to compare the importance of all different hyperparameters intuitively. 
+Then, I searched Google Scholar and found that most of the papers about hyperparameters are on tuning parameters for different algorithms, but the amount of studies on evaluating and comparing the importance of the hyperparameters of a specific algorithm is still small. Therefore, I think how to evaluate and quantify hyperparameters importance from a mathematical and theoretical perspective may be a direction that deserves to study.
 
 ## 3.8 References
-[1] W.H.Wolberg, W.N.Street,O.L.Mangasarian (1995). Breast Cancer Wisconsin (Diagnostic) Data Set [online]. Acessed: 18 December 2021. Available: https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29  
+[1] Onel Harrison (2018).Machine Learning Basics with the K-Nearest Neighbors Algorithm [online]. Accessed: 18 December 2021. Available: https://towardsdatascience.com/machine-learning-basics-with-the-k-nearest-neighbors-algorithm-6a6e71d01761
+
+[2] Harsh H (2016). Why does knn get effected by the class imbalance? [online]. Accesssed: 18 December 2021. Available: https://www.quora.com/Why-does-knn-get-effected-by-the-class-imbalance
+
+[3] W.H.Wolberg, W.N.Street,O.L.Mangasarian (1995). Breast Cancer Wisconsin (Diagnostic) Data Set [online]. Acessed: 18 December 2021. Available: https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+%28Diagnostic%29  
+
+[4] S.A.Gokte (2020). Most Popular Distance Metrics Used in KNN and When to Use Them [online]. Accessed: 21 December 2021. Available: https://www.kdnuggets.com/2020/11/most-popular-distance-metrics-knn.html
+
+[5] H.Dubey, V.Pudi (2013). Class Based Weighted K-Nearest Neighbor over Imbalance Dataset [online]. Accessed: 21 December 2021. Available: https://www.semanticscholar.org/paper/Class-Based-Weighted-K-Nearest-Neighbor-over-Dubey-Pudi/3b64eb13f3f18f8356d8efdb81eccbb27722cbeb
   
-[2] Mouselimis Lampros (2016).Random search and resampling techniques in R [online]. Acessed: 19 December 2021. Available: http://mlampros.github.io/2016/03/14/random_search_R/  
+[6] Jason Brownlee (2020). Hyperparameter Optimization With Random Search and Grid Search [online]. Accessed: 22 December 2021. Available: https://machinelearningmastery.com/hyperparameter-optimization-with-random-search-and-grid-search/  
+
+[7] Mouselimis Lampros (2016).Random search and resampling techniques in R [online]. Acessed: 19 December 2021. Available: http://mlampros.github.io/2016/03/14/random_search_R/  
+[8] Wikipedia (2021). Lazy learning [online]. Accessed: 22 December 2021. Available: https://en.wikipedia.org/wiki/Lazy_learning  
+
+[9] Steve Tjoa (2013). StackOverflow. Nearest neighbors in high-dimensional data? [online]. Accessed: 19 December 2021. Available: https://stackoverflow.com/questions/5751114/nearest-neighbors-in-high-dimensional-data  
+
+[10] Steven Schmatz (2019). Quora. How does a k-d tree find the K nearest neighbours? [online]. Accessed: 20 December 2021. Available: https://www.quora.com/How-does-a-k-d-tree-find-the-K-nearest-neighbors  
   
-[3] Gregory Jefferis (2019). RAAN [online]. Acessed: 20 December 2021. Available: https://www.rdocumentation.org/packages/RANN/versions/2.6.1  
+[11] Gregory Jefferis (2019). RAAN [online]. Acessed: 20 December 2021. Available: https://www.rdocumentation.org/packages/RANN/versions/2.6.1  
 
 
 

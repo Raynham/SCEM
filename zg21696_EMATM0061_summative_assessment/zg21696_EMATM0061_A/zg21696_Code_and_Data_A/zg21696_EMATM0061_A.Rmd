@@ -6,27 +6,31 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 ```
 
 ### A.1
-#### Begin by downloading the csv file available within the Assessment section within Blackboard entitled “finance_data_EMATM0061”. Next load the “finance_data_EMATM0061” csv file into R data frame called “finance_data_original”.
+#### (Q) Begin by downloading the csv file available within the Assessment section within Blackboard entitled “finance_data_EMATM0061”. Next load the “finance_data_EMATM0061” csv file into R data frame called “finance_data_original”.
+#### (A)
 ```{r}
 data = read.csv("finance_data_EMATM0061.csv", header = TRUE)
 ```
-#### How many rows and how many columns does this data frame have?
-there are 1051 rows and 30 columns.
+#### (Q) How many rows and how many columns does this data frame have?
+#### (A)
+There are 1051 rows and 30 columns.
 ```{r}
 dim(data)
 ```
 ### A.2
-#### Generate a new data frame called “finance_data” which is a subset of the “finance_data_original” data frame with the same number of rows, but only six columns:
+#### (Q) Generate a new data frame called “finance_data” which is a subset of the “finance_data_original” data frame with the same number of rows, but only six columns:
 * The first column should be called “state_year_code” and correspond to the “state_year_code” column in the csv.
 * The second column should be called “education_expenditure” and should correspond to the “Details.Education.Education.Total” column in the csv.
 * The third column should be called “health_expenditure” and should correspond to the “Details.Health.Health.Total.Expenditure” column in the csv.
 * The fourth column should be called “transport_expenditure” and should correspond to the “Details.Transportation.Highways.Highways.Total.Expenditure” column in the csv.
 * The fifth column should be called “totals_revenue” and should correspond to the “Totals.Revenue” column in the csv.
-* The sixth column should be called “totals_expenditure” and should correspond to the “Totals.Expenditure” column in the csv. 
+* The sixth column should be called “totals_expenditure” and should correspond to the “Totals.Expenditure” column in the csv.   
+
+#### (A)
 ```{r}
 library(tidyverse)
 finance_data <- data %>% select(state_year_code,
@@ -35,39 +39,48 @@ finance_data <- data %>% select(state_year_code,
                                 transport_expenditure = Details.Transportation.Highways.Highways.Total.Expenditure,
                                 totals_revenue = Totals.Revenue,
                                 totals_expenditure = Totals.Expenditure)
-
-dim(finance_data)
 ```
-#### Display a subset of the “finance_data” dataframe consisting of the first five rows and first three columns (“state_year_code”,“education_expenditure”,“health_expenditure”)
+Through dim() and colnames(), show the column number, row number of the new data frame and column name.
+```{r}
+dim(finance_data)
+colnames(finance_data)
+```
+#### (Q) Display a subset of the “finance_data” dataframe consisting of the first five rows and first three columns (“state_year_code”,“education_expenditure”,“health_expenditure”)
+#### (A)
 ```{r}
 head(finance_data%>%select(state_year_code,education_expenditure,health_expenditure),5)
 ```
 ### A.3
-#### Create a new column within the "finance_data" data frame called "totals_savings" which is equal to the difference between revenue and the expenditure ie. the elements of the "totals_savings" column are equal to elements within the "totals_revenue" minus the element within the "totals_expenditure" column, for each row. And the "finance_data" data frame should now have seven columns.
-
+#### (Q) Create a new column within the "finance_data" data frame called "totals_savings" which is equal to the difference between revenue and the expenditure ie. the elements of the "totals_savings" column are equal to elements within the "totals_revenue" minus the element within the "totals_expenditure" column, for each row. And the "finance_data" data frame should now have seven columns.
+#### (A)
 ```{r}
 finance_data <- finance_data %>% mutate(totals_savings = totals_revenue - totals_expenditure)
 dim(finance_data)
 ```
-#### Display a subset of the “finance_data” dataframe consisting of the first three rows and the four columns "state_year_code","totals_revenue", "totals_expenditure", "totals_savings"
+#### (Q) Display a subset of the “finance_data” dataframe consisting of the first three rows and the four columns "state_year_code","totals_revenue", "totals_expenditure", "totals_savings"
+#### (A)
 ```{r}
 head(finance_data%>%select(state_year_code,totals_revenue,totals_expenditure,totals_savings),3)
 ```
 ### A.4
-#### The “state_year_code” column within your “finance_data” data frame contains both a state and a year in character format connected via a double underscore. Divide the “state_year_code” column into two separate columns, a “state” column and a “year” column which replace the original “state_year_code” column. The “finance_data” data frame should now have 1051 rows and 8 columns 
+#### (Q) The “state_year_code” column within your “finance_data” data frame contains both a state and a year in character format connected via a double underscore. Divide the “state_year_code” column into two separate columns, a “state” column and a “year” column which replace the original “state_year_code” column. The “finance_data” data frame should now have 1051 rows and 8 columns 
+#### (A)
 ```{r}
 finance_data <- finance_data %>% separate(col = "state_year_code",into = c("state","year"), sep = "__", convert = TRUE)
 dim(finance_data)
 ```
-#### Convert the states so that they appear with the first letter of each word in upper case and the remainder in lower case eg. we should see “New Hampshire” rather than “NEW HAMPSHIRE”. You may wish to use the function str_to_title(). Display a subset of the “finance_data” data frame consisting of the first three rows and the five columns "state", "year", "totals_revenue", "totals_expenditure", "totals_savings"
+#### (Q) Convert the states so that they appear with the first letter of each word in upper case and the remainder in lower case eg. we should see “New Hampshire” rather than “NEW HAMPSHIRE”. You may wish to use the function str_to_title(). Display a subset of the “finance_data” data frame consisting of the first three rows and the five columns "state", "year", "totals_revenue", "totals_expenditure", "totals_savings"
 
+#### (A)
 ```{r}
 finance_data <- finance_data %>% mutate(state = str_to_title(state))
 head(finance_data%>%select(state, year, totals_revenue, totals_expenditure, totals_savings),3)
 ```
 
 ### A.5
-#### Generate a plot which displays the total revenue ("total_revenue") as function of the year ("year") for the following four states: Louisiana, Montana, Mississippi and Kentucky. Display the revenue in terms of millions of dollars.
+#### (Q) Generate a plot which displays the total revenue ("total_revenue") as function of the year ("year") for the following four states: Louisiana, Montana, Mississippi and Kentucky. Display the revenue in terms of millions of dollars.
+
+#### (A)
 ```{r}
 ## First, extract the target data and change the unit of "totals_revenue"
 four_states_revenue_by_year <- finance_data %>%
@@ -79,8 +92,9 @@ ggplot(four_states_revenue_by_year, aes(x=year, y=totals_revenue_in_mill, color=
 ```
 
 ### A.6
-#### Create a function called get_decade() which takes as input a number and rounds that number down to the nearest multiple of 10. For example, the numbers 20,21,22,...,29 would all be mapped to the output 20
+#### (Q) Create a function called get_decade() which takes as input a number and rounds that number down to the nearest multiple of 10. For example, the numbers 20,21,22,...,29 would all be mapped to the output 20
 
+#### (A)
 ```{r}
 get_decade <- function(val){
   temp <- floor(val/10)
@@ -89,13 +103,15 @@ get_decade <- function(val){
 }
 ```
 
-#### Use your get_decade() function to add a new column to the "finance_data" data frame called "decade" which should give the decade corresponding to the year column. For example, the decade of the years 1990,1991,. . . ,1998,1999 is 1990. Your “finance_data” data frame should now have nine columns.
+#### (Q) Use your get_decade() function to add a new column to the "finance_data" data frame called "decade" which should give the decade corresponding to the year column. For example, the decade of the years 1990,1991,. . . ,1998,1999 is 1990. Your “finance_data” data frame should now have nine columns.
 
+#### (A)
 ```{r}
 finance_data <- finance_data%>%mutate(decade = get_decade(year))
 dim(finance_data)
 ```
-#### Which three states had the highest mean-average savings ("totals_savings") over the decade starting 2000?
+#### (Q) Which three states had the highest mean-average savings ("totals_savings") over the decade starting 2000?
+#### (A)
 It can be seen from the table below that Texas, Ohio, California are the three states which had the highest mean-average savings in the decade from 2000 to 2010.
 ```{r}
 head(finance_data %>% 
@@ -106,7 +122,7 @@ head(finance_data %>%
 ```
 
 ### A.7
-#### Next generate a summary data frame from the "inance_data" data frame called "alaska_summary" with the following properties:
+#### (Q) Next generate a summary data frame from the "inance_data" data frame called "alaska_summary" with the following properties:
 #### Your summary data frame should correspond to rows associated with the state of Alaska. Your summary data frame should have three rows each corresponding to a decade from 1990 through to 2010 inclusive. Your data frame should also have seven columns:
 * (a) "decade" – the decade (1990, 2000, 2010)
 * (b) "ed_mn" – the mean of the education expenditure in Alaska for the corresponding decade
@@ -115,6 +131,8 @@ head(finance_data %>%
 * (e) "he_md" – the median of the health expenditure in Alaska for the corresponding decade
 * (f) "tr_mn" – the mean of the transport expenditure in Alaska for the corresponding decade
 * (g) "tr_md" – the median of the transport expenditure in Alaska for the corresponding decade
+
+#### (A)
 ```{r}
 alaska_summary <- finance_data%>%
   filter(state=="Alaska", decade%in%c(1990,2000,2010))%>%
@@ -128,8 +146,9 @@ alaska_summary <- finance_data%>%
 alaska_summary  
 ```
 ### A.8
-#### Create a function called impute_by_median which takes as input a vector numerical values, which may include some “NA”s, and replaces any missing values (“NA”s) with the median over the vector.
+#### (Q) Create a function called impute_by_median which takes as input a vector numerical values, which may include some “NA”s, and replaces any missing values (“NA”s) with the median over the vector.
 
+#### (A)
 ```{r}
 impute_by_median <- function(vec){
   med <- median(vec,na.rm = TRUE)
@@ -138,8 +157,9 @@ impute_by_median <- function(vec){
 }
 ```
 
-#### Next generate a subset of your "finance_data" data frame called "idaho_2000" which contains all those rows in which the state column takes the value "Idaho" and the "decade" column takes the value "2000" and includes the columns "year", "education_expenditure", "health_expenditure", "transport_expenditure", "totals_revenue", "totals_expenditure", "totals_savings" (i.e. all columns except "state" and "decade")
+#### (Q) Next generate a subset of your "finance_data" data frame called "idaho_2000" which contains all those rows in which the state column takes the value "Idaho" and the "decade" column takes the value "2000" and includes the columns "year", "education_expenditure", "health_expenditure", "transport_expenditure", "totals_revenue", "totals_expenditure", "totals_savings" (i.e. all columns except "state" and "decade")
 
+#### (A)
 ```{r}
 idaho_2000 <- finance_data %>% 
   filter(state == "Idaho", decade == 2000)%>%
@@ -149,12 +169,10 @@ idaho_2000
 ```
 
 
-#### Now apply your "impute_by_median" data frame to create a new data frame called “idaho_2000_imputed” which is based on your existing "idaho_2000" data frame but with any missing values replaced with the corresponding median value for the that column. That is, for each of the columns "education_expenditure", "health_expenditure", "transport_expenditure", "totals_revenue", "totals_expenditure", "totals_savings" any missing values (given by "NA") are replaced with the median over that column.
-
-### And Display a subset of “idaho_2000_imputed” data frame consisting of the first five rows and the four columns "year", "health_expenditure", "education_expenditure" and "totals_savings".
+#### (Q) Now apply your "impute_by_median" data frame to create a new data frame called “idaho_2000_imputed” which is based on your existing "idaho_2000" data frame but with any missing values replaced with the corresponding median value for the that column. That is, for each of the columns "education_expenditure", "health_expenditure", "transport_expenditure", "totals_revenue", "totals_expenditure", "totals_savings" any missing values (given by "NA") are replaced with the median over that column. And Display a subset of “idaho_2000_imputed” data frame consisting of the first five rows and the four columns "year", "health_expenditure", "education_expenditure" and "totals_savings".
 
 
-
+#### (A)
 ```{r}
 idaho_2000_imputed <- idaho_2000 %>% mutate_all(.f=impute_by_median)
 head(idaho_2000_imputed%>%select(year,health_expenditure,education_expenditure,totals_savings),5)
